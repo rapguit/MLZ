@@ -22,5 +22,5 @@ setup(
     description='MLZ: Machine Learning for photo-Z, a photometric redshift PDF estimator',
     long_description=open('README.txt').read(),
     url='http://lcdm.astro.illinois.edu/static/code/mlz/MLZ-1.2/doc/html/index.html',
-    install_requires=['mpi4py', 'numpy', 'matplotlib', 'healpy', 'scipy', 'pyfits'],
+    install_requires=['mpi4py', 'numpy', 'matplotlib', 'healpy', 'scipy', 'astropy'],
 )
