@@ -27,7 +27,7 @@ KeyAtt           : zs                           #name of  the column to be predi
 #     CODE STEPS
 #------------------------------------------------------
 CheckOnly        : no                # Check everything with small samples to test the codes
-PredictionMode   : TPZ_C             # TPZ/SOM/TPZ_C
+PredictionMode   : TPZ               # TPZ/SOM/TPZ_C
 PredictionClass  : Reg               # Reg/Class
 #------------------------------------------------------
 #   REDSHIFT RELATED (OR FOR CLASSIFICATION)
