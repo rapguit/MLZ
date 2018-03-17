@@ -4,10 +4,9 @@
 """
 __author__ = 'Matias Carrasco Kind'
 
-import numpy as np
-import random as rn
 import os
-
+import random as rn
+import numpy as np
 
 def split_point(data1, yvals, minleaf):
     """
@@ -255,7 +254,8 @@ class Ctree():
         Same as :func:`Rtree.get_vals`
         """
         out = search(line, self.root)
-        if len(out) >= 1: return out
+        if len(out) >= 1: 
+            return out
         return np.array([-1.])
 
     def print_branch(self, branch):
@@ -270,7 +270,8 @@ class Ctree():
         """
         if path == '':
             path = os.getcwd() + '/'
-        if not os.path.exists(path): os.system('mkdir -p ' + path)
+        if not os.path.exists(path): 
+            os.system('mkdir -p ' + path)
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
@@ -284,7 +285,8 @@ class Ctree():
 
         if path == '':
             path = os.getcwd() + '/'
-        if not os.path.exists(path): os.system('mkdir -p ' + path)
+        if not os.path.exists(path): 
+            os.system('mkdir -p ' + path)
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
@@ -317,7 +319,8 @@ class Ctree():
                     node_dict[n1] = [n2]
                     node1 = 'node_' + str(n1)
                     node2 = 'node_' + str(n2)
-                    if jl == len(Lnum) - 2: node2 = 'Leaf_' + str(n2)
+                    if jl == len(Lnum) - 2: 
+                        node2 = 'Leaf_' + str(n2)
                     line = node1 + ' -> ' + node2 + ';\n'
                     fdot3.write(line)
                     line = node1 + '''[label="", height=0.3, fillcolor=''' + colors[ldim[jl]] + '] ; \n'
@@ -332,7 +335,8 @@ class Ctree():
                         node1 = 'node_' + str(n1)
                         node_dict[n1].append(n2)
                         node2 = 'node_' + str(n2)
-                        if jl == len(Lnum) - 2: node2 = 'Leaf_' + str(n2)
+                        if jl == len(Lnum) - 2: 
+                            node2 = 'Leaf_' + str(n2)
                         line = node1 + ' -> ' + node2 + ';\n'
                         fdot3.write(line)
                         if jl == len(Lnum) - 2:
@@ -486,7 +490,8 @@ class Rtree():
         """
         if path == '':
             path = os.getcwd() + '/'
-        if not os.path.exists(path): os.system('mkdir -p ' + path)
+        if not os.path.exists(path): 
+            os.system('mkdir -p ' + path)
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
@@ -677,5 +682,3 @@ def branch2num(branch):
         if b == 'R':
             num.append(num[-1] * 2 + 2)
     return num
-     
-
