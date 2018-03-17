@@ -4,7 +4,7 @@ import os, sys
 
 path_src = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if not path_src in sys.path: sys.path.insert(1, path_src)
-from mlz.utils import *
+from mlz.utils import utils_mlz
 import mlz.plot.plotting as pl
 
 if len(sys.argv) < 2:

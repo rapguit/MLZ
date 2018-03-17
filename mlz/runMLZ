@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-from numpy import *
-__version__ = '1.2'
+__version__ = '1.3'
+#from numpy import *
+import numpy as np
 import copy
 import random as rn
 import os, sys
-import pyfits as pf
 import argparse
+from astropy.io import fits as pf
+
 
 try:
-    from ml_codes import *
-    from utils import *
+    from ml_codes import SOMZ, TPZ
+    from utils import utils_mlz, analysis, data, pdf_storage
 except:
-    from mlz.ml_codes import *
-    from mlz.utils import *
+    from mlz.ml_codes import SOMZ, TPZ
+    from mlz.utils import utils_mlz, analysis, data, pdf_storage
 SF90 = True
 try:
     import ml_codes.somF
@@ -43,16 +45,17 @@ else:
     rank = 0
 
 
+
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         if rank == 0:
-            print '\n**************************'
+            print('\n**************************')
             sys.stderr.write('Error: %s\n' % message)
-            print '**************************\n'
+            print('**************************\n')
             self.print_help()
-            print
-            print '**************************\n'
-            print
+            print()
+            print('**************************\n')
+            print()
 
         if PLL == 'MPI': MPI.Finalize()
         sys.exit(2)
@@ -60,8 +63,8 @@ class MyParser(argparse.ArgumentParser):
 
 parser = MyParser(description='Compute photo-z using Machine Learning techniques, check full documentation at ' \
                               'http://lcdm.astro.illinois.edu/code/mlz.html or  ' \
-                              ' *Comments/questions: Matias Carrasco Kind mcarras2@illinois.edu*',
-                  version="version: "+__version__)
+                              ' *Comments/questions: Matias Carrasco Kind mcarras2@illinois.edu*')#,
+                  #version="version: "+__version__)
 parser.add_argument("inputsfile", help="Inputs file with all parameters, check documentation for more info")
 parser.add_argument("--no_train", help="It skips the training stage assuming it was already done", action="store_true")
 parser.add_argument("--no_test", help="It skips the testing stage on test data", action="store_true")
@@ -83,7 +86,7 @@ Nproc = size  # number of processors
 def join_oob(rank, rawA, PLL):
     if rank == 0:
         Oraw = copy.deepcopy(rawA)
-        for srank in xrange(1, Nproc):
+        for srank in range(1, Nproc):
             if PLL == 'MPI':
                 rawA = comm.recv(source=srank, tag=srank * 2)
                 Oraw += rawA
@@ -115,7 +118,7 @@ if not modify == None:
         if key in allk:
             if key in Pars_in.tofloat: val = float(val)
             com = 'Pars_in.' + key + '=val'
-            exec com
+            exec(com)
             wkey = Pars_in.all_names.index(key)
             Pars_in.all_values[wkey] = val
         else:
@@ -188,11 +191,11 @@ if Pars_in.dotrain == 'yes':
         utils_mlz.printpz()
 
     if Pars_in.importancefile == 'none':
-        Pars_in.importance = ones(len(Pars_in.att))
-        Pars_in.importance_all = ones(len(Pars_in.att))
+        Pars_in.importance = np.ones(len(Pars_in.att))
+        Pars_in.importance_all = np.ones(len(Pars_in.att))
     else:
-        Pars_in.importance = loadtxt(Pars_in.importancefile)
-        Pars_in.importance_all = loadtxt(Pars_in.importancefile)
+        Pars_in.importance = np.loadtxt(Pars_in.importancefile)
+        Pars_in.importance_all = np.loadtxt(Pars_in.importancefile)
 
     #TRAIN FIRST
     ntot = int(Pars_in.nrandom * Pars_in.ntrees)
@@ -201,7 +204,7 @@ if Pars_in.dotrain == 'yes':
         if ntot < Nproc: utils_mlz.printpz(' ** Note that the number of trees is less that number of processors... **', yellow=True)
     s0, s1 = utils_mlz.get_limits(ntot, Nproc, rank)
     if rank == 0:
-        for i in xrange(Nproc):
+        for i in range(Nproc):
             Xs_0, Xs_1 = utils_mlz.get_limits(ntot, Nproc, i)
             if Xs_0==Xs_1 :
                 utils_mlz.printpz('idle...  -------------> to core ', i)
@@ -216,21 +219,21 @@ if Pars_in.dotrain == 'yes':
         Train.get_XY()
         train_yvals = Train.Y
         if Cmode == 'Reg':
-            OP0raw = zeros((Train.nobj, len(zfine) - 1))
+            OP0raw = np.zeros((Train.nobj, len(zfine) - 1))
             Train_S = analysis.GetPz_short(Pars_in)
         if Cmode == 'Class':
-            OS1 = zeros((Train.nobj, 3))
+            OS1 = np.zeros((Train.nobj, 3))
 
     if Pars_in.varimportance == 'yes':
         if Cmode == 'Reg':
-            OP0rawV = zeros((Train.nobj, len(zfine) - 1, len(Pars_in.att)))
+            OP0rawV = np.zeros((Train.nobj, len(zfine) - 1, len(Pars_in.att)))
             Train_SV = analysis.GetPz_short(Pars_in)
         if Cmode == 'Class':
-            OS1V = zeros((Train.nobj, 3, len(Pars_in.att)))
+            OS1V = np.zeros((Train.nobj, 3, len(Pars_in.att)))
 
-    for kss in xrange(s0, s1):
+    for kss in range(s0, s1):
         if Pars_in.nrandom > 1:
-            ir = kss / int(Pars_in.ntrees)
+            ir = kss // int(Pars_in.ntrees)
             if ir != 0: Train.newcat(ir)
         if Pmode == 'SOM': DD = Train.sample_dim(int(Pars_in.natt))
         if Pmode == 'TPZ': DD = 'all'
@@ -242,18 +245,23 @@ if Pars_in.dotrain == 'yes':
             impp = []
             for jk, ik in enumerate(Pars_in.att):
                 if DD.has_key(ik): impp.append(Pars_in.importance_all[jk])
-            Pars_in.importance = array(impp)
+            Pars_in.importance = np.array(impp)
 
         if Pmode == 'TPZ':
-            T = TPZ.Rtree(Train.X, Train.Y, forest='yes', minleaf=int(Pars_in.minleaf), mstar=int(Pars_in.natt),
+            T = TPZ.Rtree(Train.X, Train.Y, forest='yes', 
+                          minleaf=int(Pars_in.minleaf), mstar=int(Pars_in.natt),
                           dict_dim=DD)
-            T.save_tree(kss, fileout=Train.Pars.treefilename, path=Train.Pars.path_output_trees)
+            T.save_tree(kss, fileout=Train.Pars.treefilename, 
+                        path=Train.Pars.path_output_trees)
+
         if Pmode == 'TPZ_C':
-            YC = arange(int(Pars_in.minz), int(Pars_in.maxz) + 1, dtype='int')
-            T = TPZ.Ctree(Train.X, Train.Y, forest='yes', minleaf=int(Pars_in.minleaf), mstar=int(Pars_in.natt),
-                          dict_dim=DD,
+            YC = np.arange(int(Pars_in.minz), int(Pars_in.maxz) + 1, dtype='int')
+            T = TPZ.Ctree(Train.X, Train.Y, forest='yes', minleaf=int(Pars_in.minleaf), 
+                          mstar=int(Pars_in.natt), dict_dim=DD,
                           impurity=Pars_in.impurityindex, nclass=YC)
-            T.save_tree(kss, fileout=Train.Pars.treefilename, path=Train.Pars.path_output_trees)
+            print(T.root)
+            T.save_tree(kss, fileout=Train.Pars.treefilename, 
+                        path=Train.Pars.path_output_trees)
         if Pmode == 'SOM':
             aps = Pars_in.alphastart
             ape = Pars_in.alphaend
@@ -271,31 +279,31 @@ if Pars_in.dotrain == 'yes':
 
         #OOB DATA
         if Pars_in.ooberror == 'yes':
-            for io in xrange(len(Train.Xoob)):
+            for io in range(len(Train.Xoob)):
                 ij = Train.oob_index_or[io]
                 tempo = T.get_vals(Train.Xoob[io])
                 if tempo[0] != -1.:
                     if Cmode == 'Reg': OP0raw[ij, :] += Train_S.get_hist(tempo)
                     if Cmode == 'Class':
-                        OS1[ij, 0] += sum(array(tempo))
-                        OS1[ij, 1] += sum(array(tempo) * array(tempo))
+                        OS1[ij, 0] += np.sum(np.array(tempo))
+                        OS1[ij, 1] += np.sum(np.array(tempo) * np.array(tempo))
                         OS1[ij, 2] += 1. * len(tempo)
 
         if Pars_in.varimportance == 'yes':
-            for ka in xrange(len(Train.indx)):
+            for ka in range(len(Train.indx)):
                 kname = Train.cols[Train.indx[ka]]
-                k_index = where(array(Pars_in.att) == kname)[0][0]
+                k_index = np.where(np.array(Pars_in.att) == kname)[0][0]
                 Xoob = copy.deepcopy(Train.Xoob)
-                indexp = rn.sample(xrange(len(Xoob)), len(Xoob))
+                indexp = rn.sample(range(len(Xoob)), len(Xoob))
                 Xoob[:, ka] = Train.Xoob[indexp, ka]
-                for io in xrange(len(Train.Xoob)):
+                for io in range(len(Train.Xoob)):
                     ij = Train.oob_index_or[io]
                     tempo = T.get_vals(Xoob[io])
                     if tempo[0] != -1.:
                         if Cmode == 'Reg': OP0rawV[ij, :, k_index] += Train_SV.get_hist(tempo)
                         if Cmode == 'Class':
-                            OS1V[ij, 0, k_index] += sum(array(tempo))
-                            OS1V[ij, 1, k_index] += sum(array(tempo) * array(tempo))
+                            OS1V[ij, 0, k_index] += np.sum(np.array(tempo))
+                            OS1V[ij, 1, k_index] += np.sum(np.array(tempo) * np.array(tempo))
                             OS1V[ij, 2, k_index] += 1. * len(tempo)
 
         del T
@@ -317,11 +325,11 @@ if Pars_in.dotrain == 'yes':
         if PLL == 'MPI': comm.Barrier()
 
         if rank == 0:
-            Z0b2 = zeros((train_nobj, 7))
+            Z0b2 = np.zeros((train_nobj, 7))
             if Cmode == 'Reg':
-                BP0b2 = zeros((train_nobj, len(zfine2)))
-                for k in xrange(train_nobj):
-                    if sum(Oraw[k]) > 0.:
+                BP0b2 = np.zeros((train_nobj, len(zfine2)))
+                for k in range(train_nobj):
+                    if np.sum(Oraw[k]) > 0.:
                         z_phot_t, pdf_phot_t = Train_S.get_pdf(Oraw[k], train_yvals[k])
                         Z0b2[k, :] = z_phot_t
                         BP0b2[k, :] = pdf_phot_t
@@ -342,20 +350,21 @@ if Pars_in.dotrain == 'yes':
     if Pars_in.varimportance == 'yes':
         if rank == 0: utils_mlz.printpz("Computing importance ranking")
         if PLL == 'MPI': comm.Barrier()
-        for ka in xrange(len(Pars_in.att)):
+        for ka in range(len(Pars_in.att)):
             if Cmode == 'Reg':
                 Oraw = join_oob(rank, OP0rawV[:, :, ka], PLL)
             if Cmode == 'Class':
                 Oraw = join_oob(rank, OS1V[:, :, ka], PLL)
             if PLL == 'MPI': comm.Barrier()
             if rank == 0:
-                Z0b2 = zeros((train_nobj, 7))
+                Z0b2 = np.zeros((train_nobj, 7))
                 if Cmode == 'Reg':
-                    for k in xrange(train_nobj):
-                        if sum(Oraw[k]) > 0.:
+                    for k in range(train_nobj):
+                        if np.sum(Oraw[k]) > 0.:
                             z_phot_t, pdf_phot_t = Train_SV.get_pdf(Oraw[k], train_yvals[k])
                             Z0b2[k, :] = z_phot_t
-                    analysis.save_single(Z0b2, Pars_in, oob='yes', var='_' + Pars_in.att[ka])
+                    analysis.save_single(Z0b2, Pars_in, oob='yes', 
+                                         var='_' + Pars_in.att[ka])
                     del Z0b2
                 if Cmode == 'Class':
                     z_0_t, z_1_t, s_0_t = analysis.class_stat(Oraw[:, 0], Oraw[:, 1], Oraw[:, 2], Pars_in)
@@ -363,7 +372,8 @@ if Pars_in.dotrain == 'yes':
                     Z0b2[:, 1] = z_0_t
                     Z0b2[:, 2] = z_1_t
                     Z0b2[:, 3] = s_0_t
-                    analysis.save_single(Z0b2, Pars_in, oob='yes', var='_' + Pars_in.att[ka])
+                    analysis.save_single(Z0b2, Pars_in, oob='yes', 
+                                         var='_' + Pars_in.att[ka])
                     del Z0b2
         del Oraw
         if Cmode == 'Reg': del OP0rawV
@@ -396,12 +406,13 @@ if Pars_in.dotest == 'yes':
     ntot = int(Pars_in.nrandom * Pars_in.ntrees)
     if rank == 0:
         local_clock = utils_mlz.Stopwatch('no')
-        Ng_temp = data.read_catalog(Pars_in.path_test + Pars_in.testfile, check=Pars_in.checkonly, get_ng='yes')
-        Ng = array(Ng_temp, 'i')
+        Ng_temp = data.read_catalog(Pars_in.path_test + Pars_in.testfile, 
+                                    check=Pars_in.checkonly, get_ng='yes')
+        Ng = np.array(Ng_temp, 'i')
         #Ng = array(len(cat_temp), 'i')
         #del cat_temp
     else:
-        Ng = array(0, 'i')
+        Ng = np.array(0, 'i')
 
     if PLL == 'MPI': comm.Barrier()
     if PLL == 'MPI': comm.Bcast([Ng, MPI.INT], root=0)
@@ -409,7 +420,7 @@ if Pars_in.dotest == 'yes':
     s0, s1 = utils_mlz.get_limits(Ng, Nproc, rank)
     if rank == 0:
         utils_mlz.printpz('-> NUMBER OF GALAXIES IN TEST CATALOG : ', Ng)
-        for i in xrange(Nproc):
+        for i in range(Nproc):
             Xs_0, Xs_1 = utils_mlz.get_limits(Ng, Nproc, i)
             utils_mlz.printpz(Xs_0, ' ', Xs_1, ' -------------> to core ', i)
 
@@ -419,11 +430,11 @@ if Pars_in.dotest == 'yes':
     if Test.has_Y():
         yvals = Test.Y
     else:
-        yvals = zeros(Test.nobj)
+        yvals = np.zeros(Test.nobj)
 
     test_nobj = Test.nobj
 
-    Z0 = zeros((Test.nobj, 7))
+    Z0 = np.zeros((Test.nobj, 7))
 
     if Pmode == 'TPZ': path1 = Test.Pars.path_output_trees
     if Pmode == 'TPZ_C': path1 = Test.Pars.path_output_trees
@@ -434,35 +445,36 @@ if Pars_in.dotest == 'yes':
     if Pmode == 'SOM': fileb = Pars_in.somfilename
 
     if Cmode == 'Reg':
-        BP0 = zeros((Test.nobj, len(zfine2)))
-        BP0raw = zeros((Test.nobj, len(zfine) - 1))
+        BP0 = np.zeros((Test.nobj, len(zfine2)))
+        BP0raw = np.zeros((Test.nobj, len(zfine) - 1))
         Test_S = analysis.GetPz_short(Pars_in)
     if Cmode == 'Class':
-        S1 = zeros(Test.nobj)
-        S2 = zeros(Test.nobj)
-        Nv = zeros(Test.nobj)
+        S1 = np.zeros(Test.nobj)
+        S2 = np.zeros(Test.nobj)
+        Nv = np.zeros(Test.nobj)
 
     if rank == 0:
         utils_mlz.printpz('Loading ',str(ntot),' trees...')
-
-    for k in xrange(ntot):
-        ff = '_%04d' % k
+    for k in range(ntot):
+        ff = '_{:04d}'.format(k)
         filec = path1 + fileb + ff + '.npy'
-        S = load(filec)
+        S = np.load(filec)
         S = S.item()
         DD = S.dict_dim
-        if Pmode == 'SOM': Test.get_XY(curr_at=DD)
-        for i in xrange(Test.nobj):
+        if Pmode == 'SOM': 
+            Test.get_XY(curr_at=DD)
+
+        for i in range(Test.nobj):
             temp = S.get_vals(Test.X[i])
             if temp[0] != -1.:
                 if Cmode == 'Reg': BP0raw[i, :] += Test_S.get_hist(temp)
                 if Cmode == 'Class':
-                    S1[i] += sum(array(temp))
-                    S2[i] += sum(array(temp) * array(temp))
+                    S1[i] += np.sum(np.array(temp))
+                    S2[i] += np.sum(np.array(temp) * np.array(temp))
                     Nv[i] += 1. * len(temp)
 
     if Cmode == 'Reg':
-        for k in xrange(test_nobj):
+        for k in range(test_nobj):
             z_phot, pdf_phot = Test_S.get_pdf(BP0raw[k], yvals[k])
             Z0[k, :] = z_phot
             BP0[k, :] = pdf_phot
@@ -491,12 +503,12 @@ if Pars_in.dotest == 'yes':
     s0, s1 = utils_mlz.get_limits(Ng, Nproc, rank)
 
     if rank == 0:
-        BIGZ = zeros((Ng, 7))
+        BIGZ = np.zeros((Ng, 7))
         BIGZ[s0:s1, :] = Z0
-        for srank in xrange(1, Nproc):
+        for srank in range(1, Nproc):
             s0, s1 = utils_mlz.get_limits(Ng, Nproc, srank)
             size_dat = s1 - s0
-            ZT = zeros((size_dat, 7))
+            ZT = np.zeros((size_dat, 7))
             if PLL == 'MPI': comm.Recv(ZT, source=srank, tag=srank * 2)
             BIGZ[s0:s1, :] = ZT
             del ZT
@@ -543,18 +555,19 @@ if Pars_in.dotest == 'yes':
                 utils_mlz.printpz('** Collecting data from processors **')
                 utils_mlz.printpz('*************************************')
                 utils_mlz.printpz()
+
             s0, s1 = utils_mlz.get_limits(Ng, Nproc, rank)
             if Pars_in.originalpdffile == 'yes':
                 if rank == 0:
                     utils_mlz.printpz("Saving Original PDFs")
                     utils_mlz.printpz()
-                    BIGP = zeros((Ng, len(zfine2)))
+                    BIGP = np.zeros((Ng, len(zfine2)))
                     BIGP[s0:s1, :] = BP0
-                    for srank in xrange(1, Nproc):
+                    for srank in range(1, Nproc):
                         s0, s1 = utils_mlz.get_limits(Ng, Nproc, srank)
                         size_dat = s1 - s0
-                        BPT = zeros((size_dat, len(zfine2)))
-                        if PLL == 'MPI': comm.Recv(BPT, source=srank, tag=srank * 2)
+                        BPT = np.zeros((size_dat, len(zfine2)))
+                        if PLL == 'MPI': comm.Recv(BPT, source=srank, tag=srank*2)
                         BIGP[s0:s1, :] = BPT
                         del BPT
                 else:
@@ -563,7 +576,8 @@ if Pars_in.dotest == 'yes':
                         if Pars_in.sparserep == 'no': del BP0
                 if PLL == 'MPI': comm.Barrier()
                 if rank == 0:
-                    analysis.save_PDF(zfine2, BIGP, Pars_in, path=path_r, filebase=filebase_r, num=num_r)
+                    analysis.save_PDF(zfine2, BIGP, Pars_in, path=path_r, 
+                                      filebase=filebase_r, num=num_r)
                     del BIGP
 
         if Pars_in.sparserep == 'yes':
@@ -574,7 +588,7 @@ if Pars_in.dotest == 'yes':
             Nmu, Nsig, Nv = map(int, Pars_in.sparsedims)
             Ncoef = int(Pars_in.numbercoef)
             Nsparse = int(Pars_in.numberbases)
-            AA = linspace(0, 1, Ncoef)
+            AA = np.linspace(0, 1, Ncoef)
             dz_sp = zfine2[1] - zfine2[0]
             Da = AA[1] - AA[0]
             max_sig = (max(zfine2) - min(zfine2)) / 12.
@@ -602,26 +616,26 @@ if Pars_in.dotest == 'yes':
             AD = pdf_storage.create_voigt_dict(zfine2, mu, Nmu, sig, Nsig, Nv)
             if rank == 0:
                 utils_mlz.printpz("Creating Sparse Representation...")
-            SPR = zeros((len(BP0), Nsparse), dtype='int32')
-            for ip in xrange(len(BP0)):
+            SPR = np.zeros((len(BP0), Nsparse), dtype='int32')
+            for ip in range(len(BP0)):
                 pdf0 = BP0[ip]
-                if sum(pdf0) > 0:
+                if np.sum(pdf0) > 0:
                     pdf0 /= sum(pdf0)
                 else:
                     continue
                 Dind, Dval = pdf_storage.sparse_basis(AD, pdf0, Nsparse)
                 if len(Dind) <= 1: continue
-                if max(Dval) > 0:
+                if np.max(Dval) > 0:
                     dval0=Dval[0]
-                    Dvalm = Dval / max(Dval)
-                    indexm = array(map(round, (Dvalm / Da)), dtype='int')
-                    index0=int(round(dval0/Da))
-                    indexm[0]=index0
+                    Dvalm = Dval / np.max(Dval)
+                    indexm = np.array(map(np.round, (Dvalm / Da)), dtype='int')
+                    index0 = int(np.round(dval0/Da))
+                    indexm[0] = index0
                 else:
-                    indexm = zeros(len(Dind), dtype='int')
-                temp_int = array(map(pdf_storage.combine_int, indexm, Dind))
+                    indexm = np.zeros(len(Dind), dtype='int')
+                temp_int = np.array(map(pdf_storage.combine_int, indexm, Dind))
                 SPR[ip, 0:len(temp_int)] = temp_int
-                AD[:, [Dind]] = AD[:, [arange(len(Dind))]]
+                AD[:, [Dind]] = AD[:, [np.arange(len(Dind))]]
                 del temp_int, indexm, Dind, Dval, Dvalm
             del BP0
             if PLL == 'MPI': comm.Barrier()
@@ -635,7 +649,8 @@ if Pars_in.dotest == 'yes':
         if Pars_in.multiplefiles == 'yes':
             if Pars_in.sparserep == 'yes':
                 head['N_TOT'] = len(SPR)
-                analysis.save_PDF_sparse(zfine2, SPR, head, Pars_in, path=path_r, filebase=filebase_r, num=num_r,
+                analysis.save_PDF_sparse(zfine2, SPR, head, Pars_in, path=path_r, 
+                                         filebase=filebase_r, num=num_r,
                                          multiple='yes', rank=rank)
                 del SPR
         else:
@@ -644,12 +659,12 @@ if Pars_in.dotest == 'yes':
                 if rank == 0:
                     utils_mlz.printpz("Saving Sparse Represenation PDFs")
                     utils_mlz.printpz()
-                    BIGP = zeros((Ng, Nsparse), dtype='int32')
+                    BIGP = np.zeros((Ng, Nsparse), dtype='int32')
                     BIGP[s0:s1, :] = SPR
-                    for srank in xrange(1, Nproc):
+                    for srank in range(1, Nproc):
                         s0, s1 = utils_mlz.get_limits(Ng, Nproc, srank)
                         size_dat = s1 - s0
-                        BPT = zeros((size_dat, Nsparse), dtype='int32')
+                        BPT = np.zeros((size_dat, Nsparse), dtype='int32')
                         if PLL == 'MPI': comm.Recv(BPT, source=srank, tag=srank * 2)
                         BIGP[s0:s1, :] = BPT
                         del BPT
@@ -660,7 +675,9 @@ if Pars_in.dotest == 'yes':
                 if PLL == 'MPI': comm.Barrier()
                 if rank == 0:
                     head['N_TOT'] = int(Ng)
-                    analysis.save_PDF_sparse(zfine2, BIGP, head, Pars_in, path=path_r, filebase=filebase_r, num=num_r)
+                    analysis.save_PDF_sparse(zfine2, BIGP, head, Pars_in, 
+                                             path=path_r, filebase=filebase_r, 
+                                             num=num_r)
                     del BIGP
 
 if rank == 0:

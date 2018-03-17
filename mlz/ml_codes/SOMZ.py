@@ -4,10 +4,12 @@
 
 """
 __author__ = 'Matias Carrasco Kind'
-import numpy
+
+import numpy as np
 import copy
 import sys, os, random
 import warnings
+
 
 warnings.simplefilter("ignore", RuntimeWarning)
 try:
@@ -22,7 +24,7 @@ def get_index(ix, iy, nx, ny):
 
 
 def get_pair(ii, nx, ny):
-    iy = int(numpy.floor(ii / nx))
+    iy = int(np.floor(ii / nx))
     ix = ii % nx
     return ix, iy
 
@@ -50,14 +52,14 @@ def get_ns(ix, iy, nx, ny, index=False):
     if ix + 1 < nx and iy + 1 < ny: ns.append((ix + 1, iy + 1))
     if ix + 1 < nx and iy - 1 >= 0: ns.append((ix + 1, iy - 1))
 
-    ns = numpy.array(ns)
+    ns = np.array(ns)
     if not index:
         return ns
     if index:
         ins = []
-        for i in xrange(len(ns)):
+        for i in range(len(ns)):
             ins.append(get_index(ns[i, 0], ns[i, 1], nx, ny))
-        return numpy.array(ins)
+        return np.array(ins)
 
 
 def get_ns_hex(ix, iy, nx, ny, index=False):
@@ -77,14 +79,14 @@ def get_ns_hex(ix, iy, nx, ny, index=False):
     if even and ix - 1 >= 0 and iy + 1 < ny: ns.append((ix - 1, iy + 1))
     if not even and ix + 1 < nx and iy - 1 >= 0: ns.append((ix + 1, iy - 1))
     if not even and ix + 1 < nx and iy + 1 < ny: ns.append((ix + 1, iy + 1))
-    ns = numpy.array(ns)
+    ns = np.array(ns)
     if not index:
         return ns
     if index:
         ins = []
-        for i in xrange(len(ns)):
+        for i in range(len(ns)):
             ins.append(get_index(ns[i, 0], ns[i, 1], nx, ny))
-        return numpy.array(ins)
+        return np.array(ins)
 
 
 def geometry(top, Ntop, periodic='no'):
@@ -104,88 +106,88 @@ def geometry(top, Ntop, periodic='no'):
         try:
             import healpy as hpx
         except:
-            print 'Error: healpy module not found, use grid or hex topologies'
+            print('Error: healpy module not found, use grid or hex topologies')
             sys.exit(0)
     if top == 'sphere':
         nside = Ntop
         npix = 12 * nside ** 2
-        distLib = numpy.zeros((npix, npix))
-        for i in xrange(npix):
+        distLib = np.zeros((npix, npix))
+        for i in range(npix):
             ai = hpx.pix2ang(nside, i)
-            for j in xrange(i + 1, npix):
+            for j in range(i + 1, npix):
                 aj = hpx.pix2ang(nside, j)
                 distLib[i, j] = hpx.rotator.angdist(ai, aj)
                 distLib[j, i] = distLib[i, j]
-        distLib[numpy.where(numpy.isnan(distLib))] = numpy.pi
+        distLib[np.where(np.isnan(distLib))] = np.pi
     if top == 'grid':
         nx = Ntop
         ny = Ntop
         npix = nx * ny
-        mapxy = numpy.mgrid[0:1:complex(0, nx), 0:1:complex(0, ny)]
-        mapxy = numpy.reshape(mapxy, (2, npix))
+        mapxy = np.mgrid[0:1:complex(0, nx), 0:1:complex(0, ny)]
+        mapxy = np.reshape(mapxy, (2, npix))
         bX = mapxy[1]
         bY = mapxy[0]
         dx = 1. / (nx - 1)
         dy = 1. / (ny - 1)
-        distLib = numpy.zeros((npix, npix))
+        distLib = np.zeros((npix, npix))
         if periodic == 'no':
-            for i in xrange(npix):
-                for j in xrange(i + 1, npix):
-                    distLib[i, j] = numpy.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
+            for i in range(npix):
+                for j in range(i + 1, npix):
+                    distLib[i, j] = np.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
                     distLib[j, i] = distLib[i, j]
         if periodic == 'yes':
-            for i in xrange(npix):
-                for j in xrange(i + 1, npix):
-                    s0 = numpy.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
-                    s1 = numpy.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - bY[j]) ** 2)
-                    s2 = numpy.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
-                    s3 = numpy.sqrt((bX[i] - (bX[j] + 0.)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
-                    s4 = numpy.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
-                    s5 = numpy.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] + 0.)) ** 2)
-                    s6 = numpy.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
-                    s7 = numpy.sqrt((bX[i] - (bX[j] + 0.)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
-                    s8 = numpy.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
-                    distLib[i, j] = numpy.min((s0, s1, s2, s3, s4, s5, s6, s7, s8))
+            for i in range(npix):
+                for j in range(i + 1, npix):
+                    s0 = np.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
+                    s1 = np.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - bY[j]) ** 2)
+                    s2 = np.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
+                    s3 = np.sqrt((bX[i] - (bX[j] + 0.)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
+                    s4 = np.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] + 1. + dy)) ** 2)
+                    s5 = np.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] + 0.)) ** 2)
+                    s6 = np.sqrt((bX[i] - (bX[j] - 1. - dx)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
+                    s7 = np.sqrt((bX[i] - (bX[j] + 0.)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
+                    s8 = np.sqrt((bX[i] - (bX[j] + 1. + dx)) ** 2 + (bY[i] - (bY[j] - 1. - dy)) ** 2)
+                    distLib[i, j] = np.min((s0, s1, s2, s3, s4, s5, s6, s7, s8))
                     distLib[j, i] = distLib[i, j]
     if top == 'hex':
         nx = Ntop
         ny = Ntop
-        xL = numpy.arange(0, nx, 1.)
+        xL = np.arange(0, nx, 1.)
         dy = 0.8660254
-        yL = numpy.arange(0, ny, dy)
+        yL = np.arange(0, ny, dy)
         ny = len(yL)
         nx = len(xL)
         npix = nx * ny
-        bX = numpy.zeros(nx * ny)
-        bY = numpy.zeros(nx * ny)
+        bX = np.zeros(nx * ny)
+        bY = np.zeros(nx * ny)
         kk = 0
         last = ny * dy
-        for jj in xrange(ny):
-            for ii in xrange(nx):
+        for jj in range(ny):
+            for ii in range(nx):
                 if jj % 2 == 0: off = 0.
                 if jj % 2 == 1: off = 0.5
                 bX[kk] = xL[ii] + off
                 bY[kk] = yL[jj]
                 kk += 1
-        distLib = numpy.zeros((npix, npix))
+        distLib = np.zeros((npix, npix))
         if periodic == 'no':
-            for i in xrange(npix):
-                for j in xrange(i + 1, npix):
-                    distLib[i, j] = numpy.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
+            for i in range(npix):
+                for j in range(i + 1, npix):
+                    distLib[i, j] = np.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
                     distLib[j, i] = distLib[i, j]
         if periodic == 'yes':
-            for i in xrange(npix):
-                for j in xrange(i + 1, npix):
-                    s0 = numpy.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
-                    s1 = numpy.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - bY[j]) ** 2)
-                    s2 = numpy.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
-                    s3 = numpy.sqrt((bX[i] - (bX[j] + 0)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
-                    s4 = numpy.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
-                    s5 = numpy.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] + 0)) ** 2)
-                    s6 = numpy.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
-                    s7 = numpy.sqrt((bX[i] - (bX[j] + 0)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
-                    s8 = numpy.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
-                    distLib[i, j] = numpy.min((s0, s1, s2, s3, s4, s5, s6, s7, s8))
+            for i in range(npix):
+                for j in range(i + 1, npix):
+                    s0 = np.sqrt((bX[i] - bX[j]) ** 2 + (bY[i] - bY[j]) ** 2)
+                    s1 = np.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - bY[j]) ** 2)
+                    s2 = np.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
+                    s3 = np.sqrt((bX[i] - (bX[j] + 0)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
+                    s4 = np.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] + last)) ** 2)
+                    s5 = np.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] + 0)) ** 2)
+                    s6 = np.sqrt((bX[i] - (bX[j] - nx)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
+                    s7 = np.sqrt((bX[i] - (bX[j] + 0)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
+                    s8 = np.sqrt((bX[i] - (bX[j] + nx)) ** 2 + (bY[i] - (bY[j] - last)) ** 2)
+                    distLib[i, j] = np.min((s0, s1, s2, s3, s4, s5, s6, s7, s8))
                     distLib[j, i] = distLib[i, j]
     return distLib, npix
 
@@ -201,14 +203,14 @@ def get_alpha(t, alphas, alphae, NT):
     """
     Get value of alpha at a given time
     """
-    return alphas * numpy.power(alphae / alphas, float(t) / float(NT))
+    return alphas * np.power(alphae / alphas, float(t) / float(NT))
 
 
 def get_sigma(t, sigma0, sigmaf, NT):
     """
     Get value of sigma at a given time
     """
-    return sigma0 * numpy.power(sigmaf / sigma0, float(t) / float(NT))
+    return sigma0 * np.power(sigmaf / sigma0, float(t) / float(NT))
 
 
 def h(bmu, mapD, sigma):
@@ -218,7 +220,7 @@ def h(bmu, mapD, sigma):
     :param int bmu: best matching unit
     :param float mapD: array of distances computed with :func:`geometry`
     """
-    return numpy.exp(-(mapD[bmu] ** 2) / sigma ** 2)
+    return np.exp(-(mapD[bmu] ** 2) / sigma ** 2)
 
 
 class SelfMap():
@@ -242,7 +244,7 @@ class SelfMap():
 
     def __init__(self, X, Y, topology='grid', som_type='online', Ntop=28, iterations=30, periodic='no', dict_dim='',
                  astart=0.8, aend=0.5, importance=None):
-        self.np, self.nDim = numpy.shape(X)
+        self.np, self.nDim = np.shape(X)
         self.dict_dim = dict_dim
         self.X = X
         self.SF90 = SF90
@@ -251,28 +253,28 @@ class SelfMap():
         self.ape = aend
         self.top = topology
         if topology=='sphere' and not is_power_2(Ntop):
-            print 'Error, Ntop must be power of 2'
+            print('Error, Ntop must be power of 2')
             sys.exit(0)
         self.stype = som_type
         self.Ntop = Ntop
         self.nIter = iterations
         self.per = periodic
         self.distLib, self.npix = geometry(self.top, self.Ntop, periodic=self.per)
-        if importance == None: importance = numpy.ones(self.nDim)
-        self.importance = importance / numpy.sum(importance)
+        if importance == None: importance = np.ones(self.nDim)
+        self.importance = importance / np.sum(importance)
 
     def som_best_cell(self, inputs, return_vals=1):
         """
         Return the closest cell to the input object
         It can return more than one value if needed
         """
-        activations = numpy.sum(numpy.transpose([self.importance]) * (
-            numpy.transpose(numpy.tile(inputs, (self.npix, 1))) - self.weights) ** 2, axis=0)
+        activations = np.sum(np.transpose([self.importance]) * (
+            np.transpose(np.tile(inputs, (self.npix, 1))) - self.weights) ** 2, axis=0)
         if return_vals == 1:
-            best = numpy.argmin(activations)
+            best = np.argmin(activations)
             return best, activations
         else:
-            best_few = numpy.argsort(activations)
+            best_few = np.argsort(activations)
             return best_few[0:return_vals], activations
 
     def create_mapF(self, evol='no', inputs_weights=''):
@@ -282,12 +284,12 @@ class SelfMap():
         It uses a Fortran subroutine compiled with f2py
         """
         if not self.SF90:
-            print
-            print 'Fortran module somF not found, use create_map instead or try' \
-                  ' f2py -c -m somF som.f90'
+            print()
+            print('Fortran module somF not found, use create_map instead or try' \
+                  ' f2py -c -m somF som.f90')
             sys.exit(0)
         if inputs_weights == '':
-            self.weights = (numpy.random.rand(self.nDim, self.npix)) + self.X[0][0]
+            self.weights = (np.random.rand(self.nDim, self.npix)) + self.X[0][0]
         else:
             self.weights = inputs_weights
         if self.stype == 'online':
@@ -303,45 +305,45 @@ class SelfMap():
         This is same as above but uses python routines instead
         """
         if inputs_weights == '':
-            self.weights = (numpy.random.rand(self.nDim, self.npix)) + self.X[0][0]
+            self.weights = (np.random.rand(self.nDim, self.npix)) + self.X[0][0]
         else:
             self.weights = inputs_weights
         self.NT = self.nIter * self.np
         if self.stype == 'online':
             tt = 0
             sigma0 = self.distLib.max()
-            sigma_single = numpy.min(self.distLib[numpy.where(self.distLib > 0.)])
-            for it in xrange(self.nIter):
+            sigma_single = np.min(self.distLib[np.where(self.distLib > 0.)])
+            for it in range(self.nIter):
                 #get alpha, sigma
                 alpha = get_alpha(tt, self.aps, self.ape, self.NT)
                 sigma = get_sigma(tt, sigma0, sigma_single, self.NT)
-                index_random = random.sample(xrange(self.np), self.np)
-                for i in xrange(self.np):
+                index_random = random.sample(range(self.np), self.np)
+                for i in range(self.np):
                     tt += 1
                     inputs = self.X[index_random[i]]
                     best, activation = self.som_best_cell(inputs)
-                    self.weights += alpha * h(best, self.distLib, sigma) * numpy.transpose(
-                        (inputs - numpy.transpose(self.weights)))
+                    self.weights += alpha * h(best, self.distLib, sigma) * np.transpose(
+                        (inputs - np.transpose(self.weights)))
                 if evol == 'yes':
                     self.evaluate_map()
                     self.save_map(itn=it)
         if self.stype == 'batch':
             tt = 0
             sigma0 = self.distLib.max()
-            sigma_single = numpy.min(self.distLib[numpy.where(self.distLib > 0.)])
-            for it in xrange(self.nIter):
+            sigma_single = np.min(self.distLib[np.where(self.distLib > 0.)])
+            for it in range(self.nIter):
                 #get alpha, sigma
                 sigma = get_sigma(tt, sigma0, sigma_single, self.NT)
-                accum_w = numpy.zeros((self.nDim, self.npix))
-                accum_n = numpy.zeros(self.npix)
-                for i in xrange(self.np):
+                accum_w = np.zeros((self.nDim, self.npix))
+                accum_n = np.zeros(self.npix)
+                for i in range(self.np):
                     tt += 1
                     inputs = self.X[i]
                     best, activation = self.som_best_cell(inputs)
-                    for kk in xrange(self.nDim):
+                    for kk in range(self.nDim):
                         accum_w[kk, :] += h(best, self.distLib, sigma) * inputs[kk]
                     accum_n += h(best, self.distLib, sigma)
-                for kk in xrange(self.nDim):
+                for kk in range(self.nDim):
                     self.weights[kk] = accum_w[kk] / accum_n
 
                 if evol == 'yes':
@@ -368,12 +370,14 @@ class SelfMap():
             inY = self.Y
         else:
             inY = inputY
-        for i in xrange(len(inX)):
+        for i in range(len(inX)):
             inputs = inX[i]
             best, activation = self.som_best_cell(inputs)
-            if not self.yvals.has_key(best): self.yvals[best] = []
+            if not best in self.yvals: 
+                self.yvals[best] = []
             self.yvals[best].append(inY[i])
-            if not self.ivals.has_key(best): self.ivals[best] = []
+            if not best in self.ivals: 
+                self.ivals[best] = []
             self.ivals[best].append(i)
 
     def get_vals(self, line):
@@ -386,9 +390,10 @@ class SelfMap():
         :return: array with the cell content
         """
         best, act = self.som_best_cell(line, return_vals=10)
-        for ib in xrange(10):
-            if self.yvals.has_key(best[ib]): return self.yvals[best[ib]]
-        return numpy.array([-1.])
+        for ib in range(10):
+            if best[ib] in self.yvals: 
+                return self.yvals[best[ib]]
+        return np.array([-1.])
 
     def get_best(self, line):
         """
@@ -415,7 +420,7 @@ class SelfMap():
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
-        numpy.save(path + fileout, self)
+        np.save(path + fileout, self)
 
     def save_map_dict(self, path='', fileout='SOM', itn=-1):
         """
@@ -438,7 +443,7 @@ class SelfMap():
         if itn > 0:
             ff = '_%04d' % itn
             fileout += ff
-        numpy.save(path + fileout, SOM)
+        np.save(path + fileout, SOM)
 
     def plot_map(self, min_m=-100, max_m=-100, colbar='yes'):
         """
@@ -451,62 +456,63 @@ class SelfMap():
         """
 
         import matplotlib.pyplot as plt
-        from matplotlib import mpl
+        from matplotlib import colors, colorbar
         import matplotlib.cm as cm
-        from matplotlib import collections, transforms
-        from matplotlib.colors import colorConverter
+        from matplotlib import collections#, transforms
+        #from matplotlib.colors import colorConverter
         
         if self.top == 'sphere': import healpy as H
 
         if self.top == 'grid':
-            M = numpy.zeros(self.npix) - 20.
-            for i in xrange(self.npix):
-                if self.yvals.has_key(i):
-                    M[i] = numpy.mean(self.yvals[i])
-            M2 = numpy.reshape(M, (self.Ntop, self.Ntop))
+            M = np.zeros(self.npix) - 20.
+            for i in range(self.npix):
+                if i in self.yvals:
+                    M[i] = np.mean(self.yvals[i])
+            M2 = np.reshape(M, (self.Ntop, self.Ntop))
             plt.figure(figsize=(8, 8), dpi=100)
-            if min_m == -100: min_m = M2[numpy.where(M2 > -10)].min()
+            if min_m == -100: min_m = M2[np.where(M2 > -10)].min()
             if max_m == -100: max_m = M2.max()
             SM2 = plt.imshow(M2, origin='center', interpolation='nearest', cmap=cm.jet, vmin=min_m, vmax=max_m)
             SM2.cmap.set_under("grey")
             if colbar == 'yes': plt.colorbar()
             plt.axis('off')
+
         if self.top == 'hex':
             nx = self.Ntop
             ny = self.Ntop
-            xL = numpy.arange(0, nx, 1.)
+            xL = np.arange(0, nx, 1.)
             dy = 0.8660254
-            yL = numpy.arange(0, ny, dy)
+            yL = np.arange(0, ny, dy)
             ny = len(yL)
             nx = len(xL)
             npix = nx * ny
-            bX = numpy.zeros(nx * ny)
-            bY = numpy.zeros(nx * ny)
+            bX = np.zeros(nx * ny)
+            bY = np.zeros(nx * ny)
             kk = 0
-            for jj in xrange(ny):
-                for ii in xrange(nx):
+            for jj in range(ny):
+                for ii in range(nx):
                     if jj % 2 == 0: off = 0.
                     if jj % 2 == 1: off = 0.5
                     bX[kk] = xL[ii] + off
                     bY[kk] = yL[jj]
                     kk += 1
             xyo = list(zip(bX, bY))
-            sizes_2 = numpy.zeros(nx * ny) + ((8. * 0.78 / (self.Ntop + 0.5)) / 2. * 72.) ** 2 * 4. * numpy.pi / 3.
-            M = numpy.zeros(npix) - 20.
-            fcolors = [plt.cm.Spectral_r(x) for x in numpy.random.rand(nx * ny)]
-            for i in xrange(npix):
-                if self.yvals.has_key(i):
-                    M[i] = numpy.mean(self.yvals[i])
+            sizes_2 = np.zeros(nx * ny) + ((8. * 0.78 / (self.Ntop + 0.5)) / 2. * 72.) ** 2 * 4. * np.pi / 3.
+            M = np.zeros(npix) - 20.
+            fcolors = [plt.cm.Spectral_r(x) for x in np.random.rand(nx * ny)]
+            for i in range(npix):
+                if i in self.yvals:
+                    M[i] = np.mean(self.yvals[i])
             if max_m == -100: max_m = M.max()
-            if min_m == -100: min_m = M[numpy.where(M > -10)].min()
+            if min_m == -100: min_m = M[np.where(M > -10)].min()
             M = M - min_m
             M = M / (max_m - min_m)
-            for i in xrange(npix):
+            for i in range(npix):
                 if M[i] <= 0:
                     fcolors[i] = plt.cm.Greys(.5)
                 else:
                     fcolors[i] = plt.cm.jet(M[i])
-            figy = ((8. * 0.78 / (self.Ntop + 0.5) / 2.) * (3. * ny + 1) / numpy.sqrt(3)) / 0.78
+            figy = ((8. * 0.78 / (self.Ntop + 0.5) / 2.) * (3. * ny + 1) / np.sqrt(3)) / 0.78
             fig3 = plt.figure(figsize=(8, figy), dpi=100)
             #fig3.subplots_adjust(left=0,right=1.,top=1.,bottom=0.)
             a = fig3.add_subplot(1, 1, 1)
@@ -520,17 +526,19 @@ class SelfMap():
                 figbar = plt.figure(figsize=(8, 1.), dpi=100)
                 ax1 = figbar.add_axes([0.05, 0.8, 0.9, 0.15])
                 cmap = cm.jet
-                norm = mpl.colors.Normalize(vmin=min_m, vmax=max_m)
-                cb1 = mpl.colorbar.ColorbarBase(ax1, cmap=cmap, norm=norm, orientation='horizontal')
+                norm = colors.Normalize(vmin=min_m, vmax=max_m)
+                cb1 = colorbar.ColorbarBase(ax1, cmap=cmap, norm=norm, orientation='horizontal')
                 cb1.set_label('')
+
         if self.top == 'sphere':
-            M = numpy.zeros(self.npix) + H.UNSEEN
-            for i in xrange(self.npix):
-                if self.yvals.has_key(i):
-                    M[i] = numpy.mean(self.yvals[i])
+            M = np.zeros(self.npix) + H.UNSEEN
+            for i in range(self.npix):
+                if i in self.yvals:
+                    M[i] = np.mean(self.yvals[i])
             plt.figure(10, figsize=(8, 8), dpi=100)
-            if min_m == -100: min_m = M[numpy.where(M > -10)].min()
+            if min_m == -100: min_m = M[np.where(M > -10)].min()
             if max_m == -100: max_m = M.max()
             if colbar == 'yes': H.mollview(M, fig=10, title="", min=min_m, max=max_m, cbar=True)
             if colbar == 'no': H.mollview(M, fig=10, title="", min=min_m, max=max_m, cbar=False)
+
         plt.show()

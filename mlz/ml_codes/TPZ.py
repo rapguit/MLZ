@@ -3,7 +3,8 @@
 .. moduleauthor:: Matias Carrasco Kind
 """
 __author__ = 'Matias Carrasco Kind'
-from numpy import *
+
+import numpy as np
 import random as rn
 import os
 
@@ -14,19 +15,19 @@ def split_point(data1, yvals, minleaf):
     given a dimension, returns the variance and the splitting value
     """
     serr = 1.0e30
-    sort_d = argsort(data1)
+    sort_d = np.argsort(data1)
     data1 = data1[sort_d]
     yvals = yvals[sort_d]
     Ntot = len(data1)
-    u = unique(data1)
+    u = np.unique(data1)
     if len(u) == 1:
         return serr, u[0]
     if len(u) <= minleaf:
-        for ju in xrange(len(u) - 1):
-            win = where(data1 == u[ju])[0][-1]
+        for ju in range(len(u) - 1):
+            win = np.where(data1 == u[ju])[0][-1]
             nin = win + 1
             nsplit = nin
-            stemp = var(yvals[0:nin]) * nin + var(yvals[nin:]) * (Ntot - nin)
+            stemp = np.var(yvals[0:nin]) * nin + np.var(yvals[nin:]) * (Ntot - nin)
             if stemp < serr:
                 serr = stemp
                 nsplit = nin
@@ -35,8 +36,8 @@ def split_point(data1, yvals, minleaf):
     nin = 1
     nsplit = nin
     ntimes = Ntot - 2 * minleaf + 1
-    for i in xrange(ntimes):
-        stemp = var(yvals[0:nin]) * nin + var(yvals[nin:]) * (Ntot - nin)
+    for i in range(ntimes):
+        stemp = np.var(yvals[0:nin]) * nin + np.var(yvals[nin:]) * (Ntot - nin)
         if stemp < serr:
             serr = stemp
             nsplit = nin
@@ -49,16 +50,16 @@ def best_split(data_split, y_split, minleaf):
     """
     Computes the best splitting point among all available dimensions
     """
-    Ndim = shape(data_split)[1]
-    Sall = zeros(Ndim)
-    vall = zeros(Ndim)
-    for i in xrange(Ndim):
+    Ndim = np.shape(data_split)[1]
+    Sall = np.zeros(Ndim)
+    vall = np.zeros(Ndim)
+    for i in range(Ndim):
         values = data_split[:, i]
         Ssplit, vsplit = split_point(values, y_split, minleaf)
         Sall[i] = Ssplit
         vall[i] = vsplit
-    minS = argmin(Sall)
-    maxS = argmax(Sall)
+    minS = np.argmin(Sall)
+    maxS = np.argmax(Sall)
     if maxS == minS: return -1, 0., 0.
     return minS, vall[minS], Sall[minS]
 
@@ -69,19 +70,20 @@ def I_d(y_vals, impurity, nclass):
     """
     tot = len(y_vals) * 1.
     if tot == 0.:
-        print 'ERROR'
+        print('ERROR')
         return -1.
     Idd = 0.
-    if impurity == 'gini': Idd = 1.
+    if impurity == 'gini': 
+        Idd = 1.
     if impurity == 'classE':
         fn0 = -0.1
     for n in nclass:
-        fn = 1. * sum(y_vals == n) / tot
+        fn = np.sum(y_vals == n)/tot
         if impurity == 'entropy':
-            if fn > 0.: Idd += -fn * log2(fn)
+            if fn > 0.: Idd += -fn * np.log2(fn)
         if impurity == 'gini': Idd -= fn * fn
         if impurity == 'classE':
-            mfn = max(fn0, fn)
+            mfn = np.max(fn0, fn)
             fn0 = fn
     if impurity == 'classE': Idd = 1. - mfn
     return Idd
@@ -93,32 +95,35 @@ def gain(vals_x, vals_y, minleaf, impurity, nclass):
     """
     tot = len(vals_x)
     IG = I_d(vals_y, impurity, nclass)
-    max_IG = -inf
-    sort_d = argsort(vals_x)
+    max_IG = -np.inf
+    sort_d = np.argsort(vals_x)
     vals_x = vals_x[sort_d]
     vals_y = vals_y[sort_d]
-    u = unique(vals_x)
-    if len(u) == 1: return 0., u[0]
+    u = np.unique(vals_x)
+    if len(u) == 1: 
+        return 0., u[0]
+
     if len(u) <= minleaf:
-        for ju in xrange(len(u) - 1):
-            win = where(vals_x == u[ju])[0][-1]
+        for ju in range(len(u) - 1):
+            win = np.where(vals_x == u[ju])[0][-1]
             nin = win + 1
             nsplit = nin
-            nout = 1. * (tot - nin)
-            IGtemp = IG - 1. * nin / (1. * tot) * I_d(vals_y[0:nin], impurity, nclass) - 1. * nout / (1. * tot) * I_d(
-                vals_y[nin:], impurity, nclass)
+            nout = tot - nin
+            IGtemp = IG - (nin*I_d(vals_y[0:nin], impurity, nclass) +
+                           nout*I_d(vals_y[nin:], impurity, nclass))/tot
             if IGtemp > max_IG:
                 max_IG = IGtemp
                 nsplit = nin
         bbb = 0.5 * (vals_x[nsplit - 1] + vals_x[nsplit])
         return max_IG, bbb
+
     nin = 1
     nsplit = nin
     ntimes = int(tot - 2 * minleaf + 1)
-    for i in xrange(ntimes):
-        nout = 1. * (tot - nin)
-        IGtemp = IG - 1. * nin / (1. * tot) * I_d(vals_y[0:nin], impurity, nclass) - 1. * nout / (1. * tot) * I_d(
-            vals_y[nin:], impurity, nclass)
+    for i in range(ntimes):
+        nout = tot - nin
+        IGtemp = IG - (nin*I_d(vals_y[0:nin], impurity, nclass) + 
+                       nout*I_d(vals_y[nin:], impurity, nclass))/tot
         if IGtemp > max_IG:
             max_IG = IGtemp
             nsplit = nin
@@ -128,16 +133,16 @@ def gain(vals_x, vals_y, minleaf, impurity, nclass):
 
 
 def best_split_class(data_split, y_split, minleaf, impurity, nclass):
-    Ndim = shape(data_split)[1]
-    IGall = zeros(Ndim)
-    vall = zeros(Ndim)
-    for i in xrange(Ndim):
+    Ndim = np.shape(data_split)[1]
+    IGall = np.zeros(Ndim)
+    vall = np.zeros(Ndim)
+    for i in range(Ndim):
         values = data_split[:, i]
         IGsplit, vsplit = gain(values, y_split, minleaf, impurity, nclass)
         IGall[i] = IGsplit
         vall[i] = vsplit
-    maxIG = argmax(IGall)
-    minIG = argmin(IGall)
+    maxIG = np.argmax(IGall)
+    minIG = np.argmin(IGall)
     if maxIG == minIG:
         return -1, 0., 0.
     return maxIG, vall[maxIG], IGall[maxIG]
@@ -160,8 +165,10 @@ class InsertNode():
         self.right = right
         self.is_L_leaf = False
         self.is_R_leaf = False
-        if type(self.left) == type(ones(1)): self.is_L_leaf = True
-        if type(self.right) == type(ones(1)): self.is_R_leaf = True
+        if type(self.left) == type(np.ones(1)): 
+            self.is_L_leaf = True
+        if type(self.right) == type(np.ones(1)): 
+            self.is_R_leaf = True
 
 
 class Ctree():
@@ -185,11 +192,11 @@ class Ctree():
     :type dict_dim: dict
     """
 
-    def __init__(self, X, Y, minleaf=4, forest='yes', mstar=2, dict_dim='', impurity='entropy',
-                 nclass=arange(2, dtype='int')):
+    def __init__(self, X, Y, minleaf=4, forest='yes', mstar=2, dict_dim='', 
+                 impurity='entropy', nclass=np.arange(2, dtype='int')):
         self.dict_dim = dict_dim
         self.nclass = nclass
-        self.xdim = shape(X)[1]
+        self.xdim = np.shape(X)[1]
         self.nobj = len(X)
 
         def build(XD, YD, depth):
@@ -197,22 +204,27 @@ class Ctree():
             if ND <= minleaf:
                 return YD
             self.depth = depth
-            all_D = arange(shape(XD)[1])
+            all_D = np.arange(np.shape(XD)[1])
             if forest == 'no':
                 myD = all_D
             if forest == 'yes':
-                myD = rn.sample(all_D, mstar)
-            if len(unique(YD)) == 1: return YD
+                myD = rn.sample(list(all_D), mstar)
+
+            if len(np.unique(YD)) == 1: return YD
             #if len(unique(XD[:,0]))==1: return YD
-            td, sp, tvar = best_split_class(XD[:, myD], YD, minleaf, impurity, nclass)
-            if td == -1: return YD
+            td, sp, tvar = best_split_class(XD[:, myD], YD, minleaf, 
+                                            impurity, nclass)
+            if td == -1: 
+                return YD
+
             sd = myD[td]
-            S = where(XD[:, sd] <= sp, 1, 0)
-            wL = where(S == 1.)[0]
-            wR = where(S == 0.)[0]
-            NL = shape(wL)[0]
-            NR = shape(wR)[0]
-            node = InsertNode(sd, sp, NL, NR, depth, left=build(XD[wL], YD[wL], depth + 1),
+            S = np.where(XD[:, sd] <= sp, 1, 0)
+            wL = np.where(S == 1.)[0]
+            wR = np.where(S == 0.)[0]
+            NL = np.shape(wL)[0]
+            NR = np.shape(wR)[0]
+            node = InsertNode(sd, sp, NL, NR, depth, 
+                              left=build(XD[wL], YD[wL], depth + 1),
                               right=build(XD[wR], YD[wR], depth + 1))
             return node
 
@@ -244,7 +256,7 @@ class Ctree():
         """
         out = search(line, self.root)
         if len(out) >= 1: return out
-        return array([-1.])
+        return np.array([-1.])
 
     def print_branch(self, branch):
         """
@@ -262,7 +274,7 @@ class Ctree():
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
-        save(path + fileout, self)
+        np.save(path + fileout, self)
 
     def plot_tree(self, itn=-1, fileout='TPZ', path='', save_png='no'):
         """
@@ -286,20 +298,21 @@ class Ctree():
         fdot3.write('''bgcolor=white; \n ''')
         fdot3.write('''node [shape=circle, style=filled]; \n ''')
         fdot3.write('''edge [arrowhead=none, color=black, penwidth=0.4]; \n''')
-        colors = array(
-            ['purple', 'blue', 'green', 'magenta', 'brown', 'orange', 'yellow', 'aquamarine', 'cyan', 'lemonchiffon'])
-        shapes = array(['circle', 'square', 'triangle', 'polygon', 'diamond', 'star'])
-        colors_class = array(['black', 'red', 'gray', 'black', 'red', 'gray'])
+        colors = np.array(['purple', 'blue', 'green', 'magenta', 'brown', 
+                           'orange', 'yellow', 'aquamarine', 'cyan', 'lemonchiffon'])
+        shapes = np.array(['circle', 'square', 'triangle', 
+                           'polygon', 'diamond', 'star'])
+        colors_class = np.array(['black', 'red', 'gray', 'black', 'red', 'gray'])
         Leaf = self.leaves()
-        Leaf_dim = array(self.leaves_dim())
+        Leaf_dim = np.array(self.leaves_dim())
         node_dict = {}
-        for il in xrange(len(Leaf)):
+        for il in range(len(Leaf)):
             Lnum = branch2num(Leaf[il])
-            Lclass = int(round(mean(self.print_branch(Leaf[il]))))
+            Lclass = int(round(np.mean(self.print_branch(Leaf[il]))))
             ldim = Leaf_dim[il]
-            for jl in xrange(len(Lnum) - 1):
+            for jl in range(len(Lnum) - 1):
                 n1 = Lnum[jl]
-                if not node_dict.has_key(n1):
+                if not n1 in node_dict:
                     n2 = Lnum[jl + 1]
                     node_dict[n1] = [n2]
                     node1 = 'node_' + str(n1)
@@ -340,7 +353,7 @@ class Ctree():
         plt.axis('off')
         plt.figure(figsize=(8, 2.), facecolor='white')
         if self.dict_dim == '' or self.dict_dim == 'all':
-            for i in xrange(self.xdim):
+            for i in range(self.xdim):
                 plt.scatter(i, 1, s=250, c=colors[i])
                 plt.text(i, 0.5, str(i), ha='center', rotation='40')
         else:
@@ -382,7 +395,7 @@ class Rtree():
 
     def __init__(self, X, Y, minleaf=4, forest='yes', mstar=2, dict_dim=''):
         self.dict_dim = dict_dim
-        self.xdim = shape(X)[1]
+        self.xdim = np.shape(X)[1]
         self.nobj = len(X)
 
         def build(XD, YD, depth):
@@ -390,21 +403,22 @@ class Rtree():
             if ND <= minleaf:
                 return YD
             self.depth = depth
-            all_D = arange(shape(XD)[1])
+            all_D = np.arange(np.shape(XD)[1])
             if forest == 'no':
                 myD = all_D
             if forest == 'yes':
-                myD = rn.sample(all_D, mstar)
-            if len(unique(YD)) == 1: return YD
+                myD = rn.sample(list(all_D), mstar)
+            if len(np.unique(YD)) == 1: return YD
             td, sp, tvar = best_split(XD[:, myD], YD, minleaf)
             if td == -1: return YD
             sd = myD[td]
-            S = where(XD[:, sd] <= sp, 1, 0)
-            wL = where(S == 1.)[0]
-            wR = where(S == 0.)[0]
-            NL = shape(wL)[0]
-            NR = shape(wR)[0]
-            node = InsertNode(sd, sp, NL, NR, depth, left=build(XD[wL], YD[wL], depth + 1),
+            S = np.where(XD[:, sd] <= sp, 1, 0)
+            wL = np.where(S == 1.)[0]
+            wR = np.where(S == 0.)[0]
+            NL = np.shape(wL)[0]
+            NR = np.shape(wR)[0]
+            node = InsertNode(sd, sp, NL, NR, depth, 
+                              left=build(XD[wL], YD[wL], depth + 1),
                               right=build(XD[wR], YD[wR], depth + 1))
             return node
 
@@ -413,8 +427,8 @@ class Rtree():
     def leaves(self):
         """
         Return an array with all branches in string format
-        ex: ['L','R','L'] is a branch of depth 3 where L and R are the left or right
-        branches
+        ex: ['L','R','L'] is a branch of depth 3 where L and R are the left 
+        or right branches
 
         :returns: str -- Array of all branches in the tree
         """
@@ -423,7 +437,8 @@ class Rtree():
 
     def leaves_dim(self):
         """
-        Returns an array of the used dimensions for all the the nodes on all the branches
+        Returns an array of the used dimensions for all the the nodes on all 
+        the branches
 
         :return: int -- Array of all the dimensions for each node on each branch
         """
@@ -435,7 +450,8 @@ class Rtree():
         Get the branch in string format given a line search, where the line
         is a vector of attributes per individual object
 
-        :param float line: input data line to look in the tree, same dimensions as input X
+        :param float line: input data line to look in the tree, 
+        same dimensions as input X
         :returns: str -- branch array in string format, ex., ['L','L','R']
         """
         return search_B(line, self.root, SB=[])
@@ -445,13 +461,14 @@ class Rtree():
         Get the predictions  given a line search, where the line
         is a vector of attributes per individual object
 
-        :param float line: input data line to look in the tree, same dimensions as input X
+        :param float line: input data line to look in the tree, 
+        same dimensions as input X
         :returns: float -- array with the leaf content
         """
         out = search(line, self.root)
         if len(out) >= 1:
             return out
-        return array([-1.])
+        return np.array([-1.])
 
     def print_branch(self, branch):
         """
@@ -473,7 +490,7 @@ class Rtree():
         if itn >= 0:
             ff = '_%04d' % itn
             fileout += ff
-        save(path + fileout, self)
+        np.save(path + fileout, self)
 
     def plot_tree(self, itn=-1, fileout='TPZ', path='', save_png='no'):
         """
@@ -503,17 +520,17 @@ class Rtree():
         fdot3.write('''bgcolor=white; \n ''')
         fdot3.write('''node [shape=circle, style=filled]; \n ''')
         fdot3.write('''edge [arrowhead=none, color=black, penwidth=0.4]; \n''')
-        colors = array(
-            ['purple', 'blue', 'green', 'magenta', 'brown', 'orange', 'yellow', 'aquamarine', 'cyan', 'lemonchiffon'])
+        colors = np.array(['purple', 'blue', 'green', 'magenta', 'brown', 
+                           'orange', 'yellow', 'aquamarine', 'cyan', 'lemonchiffon'])
         Leaf = self.leaves()
-        Leaf_dim = array(self.leaves_dim())
+        Leaf_dim = np.array(self.leaves_dim())
         node_dict = {}
-        for il in xrange(len(Leaf)):
+        for il in range(len(Leaf)):
             Lnum = branch2num(Leaf[il])
             ldim = Leaf_dim[il]
-            for jl in xrange(len(Lnum) - 1):
+            for jl in range(len(Lnum) - 1):
                 n1 = Lnum[jl]
-                if not node_dict.has_key(n1):
+                if not n1 in node_dict:
                     n2 = Lnum[jl + 1]
                     node_dict[n1] = [n2]
                     node1 = 'node_' + str(n1)
@@ -552,7 +569,7 @@ class Rtree():
         plt.axis('off')
         plt.figure(figsize=(8, 2.), facecolor='white')
         if self.dict_dim == '' or self.dict_dim == 'all':
-            for i in xrange(self.xdim):
+            for i in range(self.xdim):
                 plt.scatter(i, 1, s=250, c=colors[i])
                 plt.text(i, 0.5, str(i), ha='center', rotation='40')
         else:

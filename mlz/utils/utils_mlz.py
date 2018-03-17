@@ -3,7 +3,7 @@
 .. moduleauthor:: Matias Carrasco Kind
 """
 __author__ = 'Matias Carrasco Kind'
-import numpy
+import numpy as np
 import time
 import sys, os
 from scipy.interpolate import interp1d as spl
@@ -31,7 +31,7 @@ def read_dt_pars(filein, verbose=True, myrank=0):
     if verbose: printpz('Reading parameters from : ', filein, '...')
     all_keys = allkeys()
     try:
-        names, values = numpy.loadtxt(filein, dtype='str', usecols=(0, 2), unpack=True)
+        names, values = np.loadtxt(filein, dtype='str', usecols=(0, 2), unpack=True)
     except IOError:
         if myrank == 0:
             printpz_err("Input file \'", filein, "\' not found")
@@ -93,7 +93,7 @@ def read_dt_pars(filein, verbose=True, myrank=0):
                 com = 'self.' + k + ' = pars_dict[k]'
                 self.all_names.append(k)
                 self.all_values.append(pars_dict[k])
-                exec com
+                exec(com)
             self.format2 = 'no'
             self.output_names()
             #self.sigmafactor = self.sigmafactor
@@ -105,7 +105,7 @@ def read_dt_pars(filein, verbose=True, myrank=0):
 
         def print_all(self):
             for name in self.all_names:
-                print '.' + name
+                print('.' + name)
             self.path_results = ''
 
     DT_p = parameters(DTpars)
@@ -142,12 +142,19 @@ def printpz(*args, **kwargs):
     blue = False
     yellow = False
     purple = False
-    if kwargs.has_key('verb'): verb = kwargs['verb']
-    if kwargs.has_key('red'): red = kwargs['red']
-    if kwargs.has_key('green'): green = kwargs['green']
-    if kwargs.has_key('blue'): blue = kwargs['blue']
-    if kwargs.has_key('yellow'): yellow = kwargs['yellow']
-    if kwargs.has_key('purple'): purple = kwargs['purple']
+    if 'verb' in kwargs: 
+        verb = kwargs['verb']
+    if 'red' in kwargs: 
+        red = kwargs['red']
+    if 'green' in kwargs: 
+        green = kwargs['green']
+    if 'blue' in kwargs: 
+        blue = kwargs['blue']
+    if 'yellow' in kwargs: 
+        yellow = kwargs['yellow']
+    if 'purple' in kwargs: 
+        purple = kwargs['purple']
+
     if len(args) == 0:
         pass
     else:
@@ -155,17 +162,17 @@ def printpz(*args, **kwargs):
             title += str(stt)
     if verb:
         if red:
-            print tcolor.red + title + tcolor.off
+            print(tcolor.red + title + tcolor.off)
         elif green:
-            print tcolor.green + title + tcolor.off
+            print(tcolor.green + title + tcolor.off)
         elif blue:
-            print tcolor.blue + title + tcolor.off
+            print(tcolor.blue + title + tcolor.off)
         elif yellow:
-            print tcolor.yellow + title + tcolor.off
+            print(tcolor.yellow + title + tcolor.off)
         elif purple:
-            print tcolor.purple + title + tcolor.off
+            print(tcolor.purple + title + tcolor.off)
         else:
-            print title
+            print(title)
 
 
 def printpz_err(*args):
@@ -178,7 +185,7 @@ def printpz_err(*args):
     printpz()
     printpz('Exiting program')
     printpz()
-    print
+    print()
 
 
 def percentile(Nvals, percent):
@@ -189,10 +196,10 @@ def percentile(Nvals, percent):
     :return: percentile value
     :rtype: float
     """
-    Nvals = Nvals[numpy.argsort(Nvals)]
+    Nvals = Nvals[np.argsort(Nvals)]
     kper = (len(Nvals) - 1) * percent
-    f = numpy.floor(kper)
-    c = numpy.ceil(kper)
+    f = np.floor(kper)
+    c = np.ceil(kper)
     if f == c:
         return float(Nvals[int(kper)])
     d0 = float(Nvals[int(f)]) * (c - kper)
@@ -217,42 +224,42 @@ class bias:
     """
 
     def __init__(self, zs, zb, name, zmin, zmax, nbins, mode=1, d_z=lambda x, y: x - y, verb=True):
-        zbins = numpy.linspace(zmin, zmax, nbins + 1)
+        zbins = np.linspace(zmin, zmax, nbins + 1)
         zmid = 0.5 * (zbins[1:] + zbins[:-1])
         self.bins = zmid
         self.zs = zs
         self.zb = zb
         self.name = name
-        self.mean = numpy.zeros(len(zmid))
-        self.absmean = numpy.zeros(len(zmid))
-        self.abssigma = numpy.zeros(len(zmid))
-        self.outlier = numpy.zeros(len(zmid))
-        self.median = numpy.zeros(len(zmid))
-        self.sigma = numpy.zeros(len(zmid))
-        self.mean_e = numpy.zeros(len(zmid))
-        self.sigma68 = numpy.zeros(len(zmid))
-        self.frac2 = numpy.zeros(len(zmid))
-        self.frac3 = numpy.zeros(len(zmid))
+        self.mean = np.zeros(len(zmid))
+        self.absmean = np.zeros(len(zmid))
+        self.abssigma = np.zeros(len(zmid))
+        self.outlier = np.zeros(len(zmid))
+        self.median = np.zeros(len(zmid))
+        self.sigma = np.zeros(len(zmid))
+        self.mean_e = np.zeros(len(zmid))
+        self.sigma68 = np.zeros(len(zmid))
+        self.frac2 = np.zeros(len(zmid))
+        self.frac3 = np.zeros(len(zmid))
         top = self.name + ' : %d galaxies' % len(zs)
         if verb: printpz(top)
-        for i in xrange(len(zmid)):
-            if mode == 0: wt = numpy.where((zs >= zbins[i]) & (zs < zbins[i + 1]))
-            if mode == 1: wt = numpy.where((zb >= zbins[i]) & (zb < zbins[i + 1]))
+        for i in range(len(zmid)):
+            if mode == 0: wt = np.where((zs >= zbins[i]) & (zs < zbins[i + 1]))
+            if mode == 1: wt = np.where((zb >= zbins[i]) & (zb < zbins[i + 1]))
             deltaz = d_z(zb, zs)
-            if numpy.shape(wt)[1] == 0: continue
-            tempz = numpy.sort(deltaz[wt])
+            if np.shape(wt)[1] == 0: continue
+            tempz = np.sort(deltaz[wt])
             self.sigma68[i] = 0.5 * (percentile(tempz, 0.84) - percentile(tempz, 0.16))
-            self.mean[i] = numpy.mean(deltaz[wt])
-            self.absmean[i] = numpy.mean(abs(deltaz[wt]))
-            self.abssigma[i] = numpy.std(abs(deltaz[wt]))
-            self.median[i] = numpy.median(deltaz[wt])
-            self.sigma[i] = numpy.std(deltaz[wt])
-            w2 = numpy.where(abs(deltaz[wt] - self.mean[i]) > 2 * self.sigma[i])
-            w3 = numpy.where(abs(deltaz[wt] - self.mean[i]) > 3 * self.sigma[i])
-            wout = numpy.where(abs(deltaz[wt]) > 0.1)
-            self.frac2[i] = 1. * numpy.shape(w2)[1] / (1. * numpy.shape(wt)[1])
-            self.frac3[i] = 1. * numpy.shape(w3)[1] / (1. * numpy.shape(wt)[1])
-            self.outlier[i] = 1. * numpy.shape(wout)[1] / (1. * numpy.shape(wt)[1])
+            self.mean[i] = np.mean(deltaz[wt])
+            self.absmean[i] = np.mean(abs(deltaz[wt]))
+            self.abssigma[i] = np.std(abs(deltaz[wt]))
+            self.median[i] = np.median(deltaz[wt])
+            self.sigma[i] = np.std(deltaz[wt])
+            w2 = np.where(abs(deltaz[wt] - self.mean[i]) > 2 * self.sigma[i])
+            w3 = np.where(abs(deltaz[wt] - self.mean[i]) > 3 * self.sigma[i])
+            wout = np.where(abs(deltaz[wt]) > 0.1)
+            self.frac2[i] = 1. * np.shape(w2)[1] / (1. * np.shape(wt)[1])
+            self.frac3[i] = 1. * np.shape(w3)[1] / (1. * np.shape(wt)[1])
+            self.outlier[i] = 1. * np.shape(wout)[1] / (1. * np.shape(wt)[1])
 
 
 class conf:
@@ -267,16 +274,16 @@ class conf:
     """
 
     def __init__(self, zconf, zb, zmin, zmax, nbins):
-        zbins = numpy.linspace(zmin, zmax, nbins + 1)
+        zbins = np.linspace(zmin, zmax, nbins + 1)
         zmid = 0.5 * (zbins[1:] + zbins[:-1])
         self.bins = zmid
-        self.zC = numpy.zeros(len(zmid))
-        self.zC_e = numpy.zeros(len(zmid))
-        for i in xrange(len(zmid)):
-            wt = numpy.where((zb >= zbins[i]) & (zb < zbins[i + 1]))
-            if numpy.shape(wt)[1] == 0: continue
-            self.zC[i] = numpy.mean(zconf[wt])
-            self.zC_e[i] = numpy.std(zconf[wt])
+        self.zC = np.zeros(len(zmid))
+        self.zC_e = np.zeros(len(zmid))
+        for i in range(len(zmid)):
+            wt = np.where((zb >= zbins[i]) & (zb < zbins[i + 1]))
+            if np.shape(wt)[1] == 0: continue
+            self.zC[i] = np.mean(zconf[wt])
+            self.zC_e[i] = np.std(zconf[wt])
 
 
 def zconf_dist(conf, nbins):
@@ -288,10 +295,10 @@ def zconf_dist(conf, nbins):
     :return: zConf dist, bins
     :rtype: float,float
     """
-    bins = numpy.linspace(0., 1, nbins)
-    s_conf = numpy.sort(conf)
-    z_conf = numpy.zeros(len(bins))
-    for i in xrange(len(bins)):
+    bins = np.linspace(0., 1, nbins)
+    s_conf = np.sort(conf)
+    z_conf = np.zeros(len(bins))
+    for i in range(len(bins)):
         z_conf[i] = percentile(s_conf, bins[i])
     return z_conf, bins
 
@@ -361,12 +368,12 @@ def print_dtpars(DTpars, outfile, system=False):
     :param class DTpars: class Pars from input file
     :param str outfile: output filename
     """
-    names = numpy.array(DTpars.all_names)
+    names = np.array(DTpars.all_names)
     vals = list(DTpars.all_values)
     sname = DTpars.sortname
     if not system: fo = open(outfile, 'w')
     for k in sname:
-        w = numpy.where(names == k)[0]
+        w = np.where(names == k)[0]
         w = w[0]
         if type(vals[w]) == type([1, 2, 3]):
             svals = ','.join(vals[w])
@@ -398,33 +405,33 @@ def get_area(z, pdf, z1, z2):
 
 
 def get_probs(z, pdf, z1, z2):
-    pdf = pdf / numpy.sum(pdf)
+    pdf = pdf / np.sum(pdf)
     PP = spl(z, pdf, bounds_error=False, fill_value=0.0)
     dzo = z[1] - z[0]
     dz = 0.001
     Ndz = int((z2 - z1) / dz)
     A = 0
-    for i in xrange(Ndz):
+    for i in range(Ndz):
         A += dz * PP((z1) + dz / 2. + dz * i)
     return A / dzo
 
 
 def get_prob_Nz(z, pdf, zbins):
-    pdf = pdf / numpy.sum(pdf)
+    pdf = pdf / np.sum(pdf)
     PP = spl(z, pdf, bounds_error=False, fill_value=0.0)
     dzo = z[1] - z[0]
     dz = 0.001
     Ndz = int((zbins[1] - zbins[0]) / dz)
-    Nzt = numpy.zeros(len(zbins) - 1)
-    for j in xrange(len(Nzt)):
-        for i in xrange(Ndz):
+    Nzt = np.zeros(len(zbins) - 1)
+    for j in range(len(Nzt)):
+        for i in range(Ndz):
             Nzt[j] += dz * PP((zbins[j]) + dz / 2. + dz * i)
     return Nzt / dzo
 
 
 def inbin(z1, minz, maxz, Nbins):
     dz = (maxz - minz) / (1. * Nbins)
-    i1 = numpy.floor((z1 - minz) / dz)
+    i1 = np.floor((z1 - minz) / dz)
     i1 = max(i1, 0)
     i1 = min(i1, Nbins - 1)
     return int(i1)
@@ -432,8 +439,8 @@ def inbin(z1, minz, maxz, Nbins):
 
 def compute_A(z, pdf, za, zb):
     # Also computes area but using midpoint rule
-    w = numpy.where((z >= za) & (z <= zb))[0]
-    A = numpy.sum(pdf[w])
+    w = np.where((z >= za) & (z <= zb))[0]
+    A = np.sum(pdf[w])
     return A * 1.
 
 
@@ -487,7 +494,7 @@ def compute_error2(z, pdf, zv):
 
 def compute_error3(z, pdf, zv):
     dz = z[1] - z[0]
-    ib = numpy.argmin(abs(zv - z))
+    ib = np.argmin(abs(zv - z))
     area = pdf[ib]
     nm = len(z) - 1
     j = 0
@@ -527,8 +534,8 @@ def compute_zConf(z, pdf, zv, sigma):
 def compute_zConf2(z, pdf, zv, sigma):
     z1a = zv - sigma * (1. + zv)
     z1b = zv + sigma * (1. + zv)
-    ib1 = numpy.argmin(abs(z1a - z))
-    ib2 = numpy.argmin(abs(z1b - z)) + 1
+    ib1 = np.argmin(abs(z1a - z))
+    ib2 = np.argmin(abs(z1b - z)) + 1
     return sum(pdf[ib1:ib2])
 
 
@@ -542,12 +549,12 @@ def get_limits(ntot, Nproc, rank):
     :return: L1,L2 the limits of the array for given processor
     :rtype: int, int
     """
-    jpproc = numpy.zeros(Nproc) + int(ntot / Nproc)
-    for i in xrange(Nproc):
+    jpproc = np.zeros(Nproc) + int(ntot / Nproc)
+    for i in range(Nproc):
         if (i < ntot % Nproc): jpproc[i] += 1
-    jpproc = map(int, jpproc)
+    jpproc = [int(x) for x in jpproc]
     st = rank
-    st = sum(jpproc[:rank]) - 1
+    st = np.sum(jpproc[:rank]) - 1
     s0 = int(st + 1)
     s1 = int(st + jpproc[rank]) + 1
     return s0, s1

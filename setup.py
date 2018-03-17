@@ -1,4 +1,3 @@
-import sys
 
 files_f90 = ['mlz/ml_codes/som.f90', ]
 from numpy.distutils.core import setup, Extension
@@ -9,7 +8,7 @@ library_dirs = []
 include_dirs = ['mlz/ml_codes']
 setup(
     name='MLZ',
-    version='1.2',
+    version='1.3',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     ext_modules=[Extension('somF', files_f90, include_dirs=['mlz/ml_codes'], ), ],

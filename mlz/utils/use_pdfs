@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-from numpy import *
+#from numpy import *
+import numpy as np
 from scipy.interpolate import interp1d as spl
-import sys, os
+import sys
 import utils_mlz
-import pyfits as pf
+from astropy.io import fits as pf
 
 try:
     from mpi4py import MPI
@@ -68,7 +69,7 @@ if len(sys.argv) > 4:
 
 fileroot = path_results + filebase + '.' + str(ir) + '.'
 
-zt, zCb = loadtxt(fileroot + 'mlz', unpack=True, usecols=(0, 4))
+zt, zCb = np.loadtxt(fileroot + 'mlz', unpack=True, usecols=(0, 4))
 ntot = len(zt)
 
 if PLL == 'MPI': comm.Barrier()
@@ -77,7 +78,7 @@ L0, L1 = utils_mlz.get_limits(ntot, size, rank)
 
 if rank == 0:
     utils_mlz.printpz('-> NUMBER OF GALAXIES IN TEST CATALOG : ', ntot)
-    for i in xrange(size):
+    for i in range(size):
         Xs_0, Xs_1 = utils_mlz.get_limits(ntot, size, i)
         utils_mlz.printpz(Xs_0, ' ', Xs_1, ' -------------> to core ', i)
 
@@ -85,7 +86,7 @@ if Pars.multiplefiles == 'yes':
     utils_mlz.printpz()
     if rank == 0: utils_mlz.printpz("Reading from multiple files")
     if Pars.writefits == 'no':
-        Bpdf = load(fileroot + 'P_' + str(rank) + '.npy')
+        Bpdf = np.load(fileroot + 'P_' + str(rank) + '.npy')
     else:
         Temp = pf.open(fileroot + 'P_' + str(rank) + '.fits')
         Bpdf = Temp[1].data.field('PDF values')
@@ -95,7 +96,7 @@ if Pars.multiplefiles == 'yes':
     del Bpdf
 else:
     if Pars.writefits == 'no':
-        Bpdf = load(fileroot + 'P.npy')
+        Bpdf = np.load(fileroot + 'P.npy')
     else:
         Temp = pf.open(fileroot + 'P.fits')
         Bpdf = Temp[1].data.field('PDF values')
@@ -108,19 +109,19 @@ zspec = zt[L0:L1]
 zC = zCb[L0:L1]
 del zt, zCb
 
-H1 = zeros((Nbins, Nbins))
+H1 = np.zeros((Nbins, Nbins))
 
 minz = Pars.minz
 maxz = Pars.maxz
 
-Nz = linspace(minz, maxz, Nbins + 1)
+Nz = np.linspace(minz, maxz, Nbins + 1)
 Nzmid = 0.5 * (Nz[1:] + Nz[:-1])
-N_z = zeros(len(Nz) - 1)
+N_z = np.zeros(len(Nz) - 1)
 
 if rank == 0:
     utils_mlz.printpz()
     utils_mlz.printpz("Creating map and computing N(z) ...")
-for i in xrange(len(spdf)):
+for i in range(len(spdf)):
     if zC[i] < zconf: continue
     i1 = utils_mlz.inbin(zspec[i], minz, maxz, Nbins)
     pdf = spdf[i]
@@ -129,8 +130,8 @@ for i in xrange(len(spdf)):
     N_z += area
 
 if rank == 0:
-    for srank in xrange(1, size):
-        temp_map = zeros((Nbins, Nbins))
+    for srank in range(1, size):
+        temp_map = np.zeros((Nbins, Nbins))
         if PLL == 'MPI': comm.Recv(temp_map, source=srank, tag=srank * 2)
         H1 += temp_map
 else:
@@ -139,8 +140,8 @@ else:
 if PLL == 'MPI': comm.Barrier()
 
 if rank == 0:
-    for srank in xrange(1, size):
-        temp_Nz = zeros(Nbins)
+    for srank in range(1, size):
+        temp_Nz = np.zeros(Nbins)
         if PLL == 'MPI': comm.Recv(temp_Nz, source=srank, tag=srank * 2)
         N_z += temp_Nz
 else:
@@ -149,9 +150,10 @@ else:
 if PLL == 'MPI': comm.Barrier()
 
 if rank == 0:
-    save(path_results + filebase + '.' + str(ir) + '_map', H1)
-    N_z = N_z / sum(N_z)
-    savetxt(path_results + filebase + '.' + str(ir) + '_zdist', zip(Nzmid, N_z), fmt='%.6f')
+    np.save(path_results + filebase + '.' + str(ir) + '_map', H1)
+    N_z = N_z / np.sum(N_z)
+    np.savetxt(path_results + filebase + '.' + str(ir) + '_zdist', 
+               list(zip(Nzmid, N_z)), fmt='%.6f')
 
     if rank == 0:
         clock_all.elapsed()

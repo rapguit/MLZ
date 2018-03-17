@@ -4,11 +4,12 @@ __author__ = 'Matias Carrasco Kind'
 .. moduleauthor:: Matias Carrasco Kind
 """
 __author__ = 'Matias Carrasco Kind'
-from numpy import *
+#from numpy import *
+import numpy as np
 from scipy import linalg as sla
 from scipy.optimize import leastsq
 from scipy import special
-import pyfits as pf
+from astropy.io import fits as pf
 
 
 def sparse_basis(dictionary, query_vec, n_basis, tolerance=None):
@@ -26,35 +27,37 @@ def sparse_basis(dictionary, query_vec, n_basis, tolerance=None):
     :return: indices, values (2 arrays one with the position and the second with the coefficients)
     """
 
-    a_n = zeros(dictionary.shape[1])
-    machine_eps = finfo(dictionary.dtype).eps
-    alpha = dot(dictionary.T, query_vec)
+    a_n = np.zeros(dictionary.shape[1])
+    machine_eps = np.finfo(dictionary.dtype).eps
+    alpha = np.dot(dictionary.T, query_vec)
     res = query_vec
-    idxs = arange(dictionary.shape[1])  # keeping track of swapping
-    L = zeros((n_basis, n_basis), dtype=dictionary.dtype)
+    idxs = np.arange(dictionary.shape[1])  # keeping track of swapping
+    L = np.zeros((n_basis, n_basis), dtype=dictionary.dtype)
     L[0, 0] = 1.
 
-    for n_active in xrange(n_basis):
-        lam = argmax(abs(dot(dictionary.T, res)))
+    for n_active in range(n_basis):
+        lam = np.argmax(np.abs(np.dot(dictionary.T, res)))
         if lam < n_active or alpha[lam] ** 2 < machine_eps:
             n_active -= 1
             break
         if n_active > 0:
             # Updates the Cholesky decomposition of dictionary
-            L[n_active, :n_active] = dot(dictionary[:, :n_active].T, dictionary[:, lam])
-            sla.solve_triangular(L[:n_active, :n_active], L[n_active, :n_active], lower=True, overwrite_b=True)
-            v = linalg.norm(L[n_active, :n_active]) ** 2
+            L[n_active, :n_active] = np.dot(dictionary[:, :n_active].T, dictionary[:, lam])
+            sla.solve_triangular(L[:n_active, :n_active], L[n_active, :n_active], 
+                                 lower=True, overwrite_b=True)
+            v = np.linalg.norm(L[n_active, :n_active]) ** 2
             if 1 - v <= machine_eps:
-                print "Selected basis are dependent or normed are not unity"
+                print("Selected basis are dependent or normed are not unity")
                 break
-            L[n_active, n_active] = sqrt(1 - v)
+            L[n_active, n_active] = np.sqrt(1 - v)
         dictionary[:, [n_active, lam]] = dictionary[:, [lam, n_active]]
         alpha[[n_active, lam]] = alpha[[lam, n_active]]
         idxs[[n_active, lam]] = idxs[[lam, n_active]]
         # solves LL'x = query_vec as a composition of two triangular systems
-        gamma = sla.cho_solve((L[:n_active + 1, :n_active + 1], True), alpha[:n_active + 1], overwrite_b=False)
-        res = query_vec - dot(dictionary[:, :n_active + 1], gamma)
-        if tolerance is not None and linalg.norm(res) ** 2 <= tolerance:
+        gamma = sla.cho_solve((L[:n_active + 1, :n_active + 1], True), 
+                              alpha[:n_active + 1], overwrite_b=False)
+        res = query_vec -np. dot(dictionary[:, :n_active + 1], gamma)
+        if tolerance is not None and np.linalg.norm(res)**2 <= tolerance:
             break
     a_n[idxs[:n_active + 1]] = gamma
     del dictionary
@@ -79,19 +82,19 @@ def reconstruct_pdf(index, vals, zfine, mu, Nmu, sigma, Nsigma, cut=1.e-5):
     :return: the pdf normalized so it sums to one
     """
 
-    zmid = linspace(mu[0], mu[1], Nmu)
-    sig = linspace(sigma[0], sigma[1], Nsigma)
-    pdf = zeros(len(zfine))
-    for k in xrange(len(index)):
-        i = index[k] / Nsigma
+    zmid = np.linspace(mu[0], mu[1], Nmu)
+    sig = np.linspace(sigma[0], sigma[1], Nsigma)
+    pdf = np.zeros(len(zfine))
+    for k in range(len(index)):
+        i = index[k] // Nsigma
         j = index[k] % Nsigma
-        pdft = 1. * exp(-((zfine - zmid[i]) ** 2) / (2. * sig[j] * sig[j]))
-        pdft = where(pdft >= cut, pdft, 0.)
-        pdft = pdft / linalg.norm(pdft)
+        pdft = np.exp(-((zfine - zmid[i])**2)/(2*sig[j]**2))
+        pdft = np.where(pdft >= cut, pdft, 0.)
+        pdft = pdft / np.linalg.norm(pdft)
         pdf += pdft * vals[k]
         #pdf = where(pdf >= cut, pdf, 0)
-    pdf = where(greater(pdf, max(pdf) * 0.005), pdf, 0.)
-    if sum(pdf) > 0: pdf = pdf / sum(pdf)
+    pdf = np.where(np.greater(pdf, np.max(pdf) * 0.005), pdf, 0.)
+    if np.sum(pdf) > 0: pdf = pdf / np.sum(pdf)
     return pdf
 
 
@@ -110,20 +113,20 @@ def reconstruct_pdf_f(index, vals, zfine, mu, Nmu, sigma, Nsigma):
     :return: a function representing the pdf
     """
 
-    zmid = linspace(mu[0], mu[1], Nmu)
-    sig = linspace(sigma[0], sigma[1], Nsigma)
-    pdf = zeros(len(zfine))
+    zmid = np.linspace(mu[0], mu[1], Nmu)
+    sig = np.linspace(sigma[0], sigma[1], Nsigma)
+    pdf = np.zeros(len(zfine))
 
     def f(x):
         ft = 0.
-        for k in xrange(len(index)):
+        for k in range(len(index)):
             i = index[k] / Nsigma
             j = index[k] % Nsigma
-            pdft = 1. * exp(-((zfine - zmid[i]) ** 2) / (2. * sig[j] * sig[j]))
-            ft2 = 1. * exp(-((x - zmid[i]) ** 2) / (2. * sig[j] * sig[j]))
+            pdft = np.exp(-((zfine - zmid[i])**2)/(2*sig[j]**2))
+            ft2 = np.exp(-((x - zmid[i])**2)/(2*sig[j]**2))
             #pdft = where(pdft >= cut, pdft, 0.)
-            pdft = where(greater(pdft, max(pdft) * 0.005), pdft, 0.)
-            ft += 1. / linalg.norm(pdft) * ft2 * vals[k]
+            pdft = np.where(np.greater(pdft, np.max(pdft) * 0.005), pdft, 0.)
+            ft += 1/np.linalg.norm(pdft) * ft2 * vals[k]
         return ft
 
     return f
@@ -144,18 +147,18 @@ def create_gaussian_dict(zfine, mu, Nmu, sigma, Nsigma, cut=1.e-5):
     :rtype: float
     """
 
-    zmid = linspace(mu[0], mu[1], Nmu)
-    sig = linspace(sigma[0], sigma[1], Nsigma)
+    zmid = np.linspace(mu[0], mu[1], Nmu)
+    sig = np.linspace(sigma[0], sigma[1], Nsigma)
     NA = Nmu * Nsigma
     Npdf = len(zfine)
-    A = zeros((Npdf, Nmu * Nsigma))
+    A = np.zeros((Npdf, Nmu * Nsigma))
     k = 0
-    for i in xrange(Nmu):
-        for j in xrange(Nsigma):
-            pdft = 1. * exp(-((zfine - zmid[i]) ** 2) / (2. * sig[j] * sig[j]))
-            pdft = where(pdft >= cut, pdft, 0.)
+    for i in range(Nmu):
+        for j in range(Nsigma):
+            pdft = np.exp(-((zfine - zmid[i])**2)/(2*sig[j]**2))
+            pdft = np.where(pdft >= cut, pdft, 0.)
             #pdft = where(greater(pdft, max(pdft) * 0.005), pdft, 0.)
-            A[:, k] = pdft / linalg.norm(pdft)
+            A[:, k] = pdft / np.linalg.norm(pdft)
             k += 1
     return A
 
@@ -177,20 +180,20 @@ def create_voigt_dict(zfine, mu, Nmu, sigma, Nsigma, Nv, cut=1.e-5):
 
     """
 
-    zmid = linspace(mu[0], mu[1], Nmu)
-    sig = linspace(sigma[0], sigma[1], Nsigma)
-    gamma = linspace(0, 0.5, Nv)
+    zmid = np.linspace(mu[0], mu[1], Nmu)
+    sig = np.linspace(sigma[0], sigma[1], Nsigma)
+    gamma = np.linspace(0, 0.5, Nv)
     NA = Nmu * Nsigma * Nv
     Npdf = len(zfine)
-    A = zeros((Npdf, NA))
+    A = np.zeros((Npdf, NA))
     kk = 0
-    for i in xrange(Nmu):
-        for j in xrange(Nsigma):
-            for k in xrange(Nv):
+    for i in range(Nmu):
+        for j in range(Nsigma):
+            for k in range(Nv):
                 #pdft = 1. * exp(-((zfine - zmid[i]) ** 2) / (2.*sig[j]*sig[j]))
                 pdft = voigt(zfine, zmid[i], sig[j], sig[j] * gamma[k])
-                pdft = where(pdft >= cut, pdft, 0.)
-                A[:, kk] = pdft / linalg.norm(pdft)
+                pdft = np.where(pdft >= cut, pdft, 0.)
+                A[:, kk] = pdft / np.linalg.norm(pdft)
                 kk += 1
     return A
 
@@ -213,21 +216,22 @@ def reconstruct_pdf_v(index, vals, zfine, mu, Nmu, sigma, Nsigma, Nv, cut=1.e-5)
     :return: the pdf normalized so it sums to one
     """
 
-    zmid = linspace(mu[0], mu[1], Nmu)
-    sig = linspace(sigma[0], sigma[1], Nsigma)
-    gamma = linspace(0, 0.5, Nv)
-    pdf = zeros(len(zfine))
-    for kk in xrange(len(index)):
+    zmid = np.linspace(mu[0], mu[1], Nmu)
+    sig = np.linspace(sigma[0], sigma[1], Nsigma)
+    gamma = np.linspace(0, 0.5, Nv)
+    pdf = np.zeros(len(zfine))
+    for kk in range(len(index)):
         i = index[kk] / (Nsigma * Nv)
         j = (index[kk] % (Nsigma * Nv)) / Nv
         k = (index[kk] % (Nsigma * Nv)) % Nv
         pdft = voigt(zfine, zmid[i], sig[j], sig[j] * gamma[k])
-        pdft = where(pdft >= cut, pdft, 0.)
-        pdft = pdft / linalg.norm(pdft)
+        pdft = np.where(pdft >= cut, pdft, 0.)
+        pdft = pdft / np.linalg.norm(pdft)
         pdf += pdft * vals[kk]
         #pdf = where(pdf >= cut, pdf, 0)
-    pdf = where(greater(pdf, max(pdf) * 0.005), pdf, 0.)
-    if sum(pdf) > 0: pdf = pdf / sum(pdf)
+    pdf = np.where(np.greater(pdf, np.max(pdf) * 0.005), pdf, 0.)
+    if np.sum(pdf) > 0: 
+        pdf = pdf / np.sum(pdf)
     return pdf
 
 
@@ -251,9 +255,9 @@ def reconstruct_pdf_int(long_index, header, cut=1.e-5):
     Nsigma = header['Nsig']
     Nv = header['Nv']
 
-    VALS = linspace(0, 1, Ncoef)
+    VALS = np.linspace(0, 1, Ncoef)
     dVals = VALS[1] - VALS[0]
-    sp_ind = array(map(get_N, long_index))
+    sp_ind = np.array(map(get_N, long_index))
     spi = sp_ind[:, 0]
     Dind2 = sp_ind[:, 1]
     vals = spi * dVals
@@ -297,23 +301,23 @@ def get_npeaks(z, pdf):
     :return: The number of peaks, positions of the local maximums, local minimums and inflexion points
     """
     local_max = []
-    curr = sign(1)
+    curr = np.sign(1)
     local_min = []
     local_in = []
-    w = where(pdf > 0)[0] #non zeros values
+    w = np.where(pdf > 0)[0] #non zeros values
     local_min.append(w[0]) #first non zero value
-    for i in xrange(w[0], len(pdf) - 1):
+    for i in range(w[0], len(pdf) - 1):
         dy = pdf[i + 1] - pdf[i]
         #if sign(dy)==sign(1) and curr==sign(1) and abs(dy) > 0. and abs(dy) < 1.e-4: local_in.append(i)
         #if sign(dy)==sign(-1) and curr==sign(-1) and abs(dy) > 0. and abs(dy) < 1.e-4: local_in.append(i)
-        if sign(dy) == sign(-1) and curr == sign(1):
+        if np.sign(dy) == np.sign(-1) and curr == np.sign(1):
             local_max.append(i)
-        if sign(dy) == sign(1) and curr == sign(-1):
+        if np.sign(dy) == np.sign(1) and curr == np.sign(-1):
             local_min.append(i)
-        if not dy == 0.: curr = sign(dy)
+        if not dy == 0.: curr = np.sign(dy)
     local_min.append(w[-1]) # last non zero
     N_peak = len(local_max)
-    N_peak = min(N_peak, 15) #Up to 15 Gaussians, can be modified
+    N_peak = np.min(N_peak, 15) #Up to 15 Gaussians, can be modified
     return N_peak, local_max, local_min, local_in
 
 
@@ -324,15 +328,15 @@ def initial_guess(z, pdf):
     """
     N_gauss, local_max, local_min, local_in = get_npeaks(z, pdf)
     t0 = []
-    w = where(pdf > 0)[0]  #non zeros values
-    range_z = max(z[w]) - min(z[w])
-    for j in xrange(N_gauss):
+    w = np.where(pdf > 0)[0]  #non zeros values
+    range_z = np.max(z[w]) - np.min(z[w])
+    for j in range(N_gauss):
         t0.append(pdf[local_max[j]])
         t0.append(z[local_max[j]])
         sigma_approx = (z[local_min[j + 1]] - z[local_min[j]]) / 4.
         t0.append(sigma_approx)
     if len(local_in) > 0:
-        for j in xrange(len(local_in)):
+        for j in range(len(local_in)):
             t0.append(pdf[local_in[j]])
             t0.append(z[local_in[j]])
             sigma_approx = (z[1] - z[0]) * 5.
@@ -341,7 +345,7 @@ def initial_guess(z, pdf):
     t0.append(max(pdf) / 2.)
     t0.append(sum(z * pdf))
     t0.append(range_z / 3.)
-    return array(t0)
+    return np.array(t0)
 
 
 def multi_gauss(P, x):
@@ -353,10 +357,10 @@ def multi_gauss(P, x):
 
     :return: The multi gaussian
     """
-    Ng = int(len(P) / 3)
-    p1 = zeros(len(x))
-    for i in xrange(Ng):
-        p1 += abs(P[0 + i * 3]) * exp(-(x - P[1 + i * 3]) ** 2 / (2. * P[2 + i * 3] * P[2 + i * 3]))
+    Ng = int(len(P) // 3)
+    p1 = np.zeros(len(x))
+    for i in range(Ng):
+        p1 += np.abs(P[0 + i * 3]) * np.exp(-(x - P[1 + i * 3])**2 / (2. * P[2 + i * 3]**2))
     return p1
 
 
@@ -372,7 +376,7 @@ def fit_multi_gauss(z, pdf, tolerance=1.49e-8):
     Fits a multi gaussian function to the pdf, given a tolerance
     """
     guess = initial_guess(z, pdf)
-    Ng = len(guess) / 3
+    Ng = len(guess) // 3
     out_p, pcov = leastsq(errf, guess, args=(z, pdf), ftol=tolerance)
     return out_p
 
@@ -392,7 +396,7 @@ def voigt(x, x_mean, sigma, gamma):
      """
 
     x = x - x_mean
-    z = (x + 1j * gamma) / (sqrt(2.) * sigma)
+    z = (x + 1j * gamma) / (np.sqrt(2.) * sigma)
     It = special.wofz(z).real
     return It
 

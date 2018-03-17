@@ -3,21 +3,24 @@
 .. moduleauthor:: Matias Carrasco Kind
 """
 __author__ = 'Matias Carrasco Kind'
-from numpy import *
-import utils_mlz
-import os, sys
-from scipy.stats import mode
-import pyfits as pf
+#from numpy import *
+import numpy as np
+import os
 import datetime
+
+from scipy.stats import mode
+from astropy.io import fits as pf
+
+from . import utils_mlz
 
 
 def get_zbins(Pars):
     Nbins = int(Pars.nzbins)
-    zfine = linspace(Pars.minz, Pars.maxz, Nbins + 1)
+    zfine = np.linspace(Pars.minz, Pars.maxz, Nbins + 1)
     resz = zfine[1] - zfine[0]
     resz2 = resz / 1.
-    zfine2 = arange(Pars.minz - resz2 * 20.-resz2/2., Pars.maxz + resz2 * 20., resz2)
-    wzin = where((zfine2 >= Pars.minz) & (zfine2 <= Pars.maxz))[0]
+    zfine2 = np.arange(Pars.minz - resz2 * 20.-resz2/2., Pars.maxz + resz2 * 20., resz2)
+    wzin = np.where((zfine2 >= Pars.minz) & (zfine2 <= Pars.maxz))[0]
     return zfine, zfine2, resz, resz2, wzin
 
 
@@ -43,45 +46,50 @@ class GetPz():
         self.wzin = wzin
         self.sigma_g = self.Pars.sigmafactor * self.resolution
         self.dz = self.resolution
-        self.x = arange(-3. * self.sigma_g - self.dz / 10., 3. * self.sigma_g + self.dz / 10., self.dz)
-        self.gaus2 = exp(-0.5 * (self.x / self.sigma_g) ** 2)
-        self.zp = zeros(self.nD) - 1.
-        self.zs = zeros(self.nD)
+        self.x = np.arange(-3*self.sigma_g - self.dz/10, 
+                           3*self.sigma_g + self.dz/10, self.dz)
+        self.gaus2 = np.exp(-0.5*(self.x/self.sigma_g)**2)
+        self.zp = np.zeros(self.nD) - 1
+        self.zs = np.zeros(self.nD)
         self.dict_zp = dict_zp
-        self.fac = zeros(self.nD)
-        self.bigpdf = zeros(len(self.zbins))
-        self.bigpdf2 = zeros((self.nD, len(self.zfine2[self.wzin])))
-        self.zs0 = zeros(self.nD)
-        self.zs1 = zeros(self.nD)
-        self.err0 = zeros(self.nD)
-        self.err1 = zeros(self.nD)
-        self.zConf0 = zeros(self.nD)
-        self.zConf1 = zeros(self.nD)
+        self.fac = np.zeros(self.nD)
+        self.bigpdf = np.zeros(len(self.zbins))
+        self.bigpdf2 = np.zeros((self.nD, len(self.zfine2[self.wzin])))
+        self.zs0 = np.zeros(self.nD)
+        self.zs1 = np.zeros(self.nD)
+        self.err0 = np.zeros(self.nD)
+        self.err1 = np.zeros(self.nD)
+        self.zConf0 = np.zeros(self.nD)
+        self.zConf1 = np.zeros(self.nD)
 
     def compute(self, do_pdf='yes'):
-        for i in xrange(self.nD):
-            self.bigpdf = zeros(len(self.zbins))
-            if self.dict_zp.has_key(i):
-                out = array(self.dict_zp[i]['zp'])
+        for i in range(self.nD):
+            self.bigpdf = np.zeros(len(self.zbins))
+            if i in self.dict_zp:
+                out = np.array(self.dict_zp[i]['zp'])
                 #wout=array(self.dict_zp[i]['wp'])
-                if self.dict_zp[i].has_key('zs'): self.zs[i] = self.dict_zp[i]['zs']
+                if 'zs' in self.dict_zp[i]: 
+                    self.zs[i] = self.dict_zp[i]['zs']
+
                 if self.Pars.predictionclass == 'Reg':
-                    for zpi in xrange(len(out)):
-                        mybin = int(floor(out[zpi] / self.resz))
+                    for zpi in range(len(out)):
+                        mybin = int(np.floor(out[zpi] / self.resz))
+
                         if mybin > self.Nbins - 1: continue
                         self.bigpdf[mybin] += 1.
-                    pdf = self.bigpdf
-                    pdf2 = interp(self.zfine2, self.zbins, pdf)
-                    pdf2 = where(greater(pdf2, max(pdf2) * 0.01), pdf2, 0.)
-                    pdf2 = convolve(pdf2, self.gaus2, 1)
-                    pdf2 = where(greater(pdf2, max(pdf2) * 0.005), pdf2, 0.)
-                    if sum(pdf2) > 0.: pdf2 /= sum(pdf2)
-                    self.zs0[i] = self.zfine2[argmax(pdf2)]
-                    self.zs0[i] = min(self.zs0[i], self.Pars.maxz)
-                    self.zs0[i] = max(self.zs0[i], self.Pars.minz)
-                    self.zs1[i] = sum(self.zfine2 * pdf2)
-                    self.zs1[i] = min(self.zs1[i], self.Pars.maxz)
-                    self.zs1[i] = max(self.zs1[i], self.Pars.minz)
+
+                    pdf = self.bigpdf 
+                    pdf2 = np.interp(self.zfine2, self.zbins, pdf)
+                    pdf2 = np.where(np.greater(pdf2, np.max(pdf2) * 0.01), pdf2, 0.)
+                    pdf2 = np.convolve(pdf2, self.gaus2, 1)
+                    pdf2 = np.where(np.greater(pdf2, np.max(pdf2) * 0.005), pdf2, 0.)
+                    if sum(pdf2) > 0.: pdf2 /= np.sum(pdf2)
+                    self.zs0[i] = self.zfine2[np.argmax(pdf2)]
+                    self.zs0[i] = np.min(self.zs0[i], self.Pars.maxz)
+                    self.zs0[i] = np.max(self.zs0[i], self.Pars.minz)
+                    self.zs1[i] = np.sum(self.zfine2 * pdf2)
+                    self.zs1[i] = np.min(self.zs1[i], self.Pars.maxz)
+                    self.zs1[i] = np.max(self.zs1[i], self.Pars.minz)
                     if do_pdf == 'yes':
                         self.err0[i] = utils_mlz.compute_error(self.zfine2, pdf2, self.zs0[i])
                         self.err1[i] = utils_mlz.compute_error(self.zfine2, pdf2, self.zs1[i])
@@ -93,11 +101,11 @@ class GetPz():
                 if self.Pars.predictionclass == 'Class':
                     if len(out) > 0:
                         self.zs0[i] = mode(out * 1.)[0][0]
-                        self.zs1[i] = mean(out * 1.)
-                    if len(out) > 0.: self.err0[i] = mode(out * 1.)[1][0] * 1. / (len(out) * 1.)
-                    self.err1[i] = std(out * 1.)
+                        self.zs1[i] = np.mean(out * 1.)
+                    if len(out) > 0.: self.err0[i] = mode(out * 1.)[1][0]/len(out)
+                    self.err1[i] = np.std(out * 1.)
 
-        bigZ = zeros((self.nD, 7))
+        bigZ = np.zeros((self.nD, 7))
         bigZ[:, 0] = self.zs
         bigZ[:, 1] = self.zs0
         bigZ[:, 2] = self.zs1
@@ -132,17 +140,18 @@ class GetPz_short():
         self.wzin = wzin
         self.sigma_g = self.Pars.sigmafactor * self.resolution
         self.dz = self.resolution
-        self.x = arange(-3. * self.sigma_g - self.dz / 10., 3. * self.sigma_g + self.dz / 10., self.dz)
-        self.gaus2 = exp(-0.5 * (self.x / self.sigma_g) ** 2)
-        self.bigpdf = zeros(len(self.zbins))
-        self.bigpdf2 = zeros(len(self.zfine2[self.wzin]))
+        self.x = np.arange(-3*self.sigma_g - self.dz/10, 
+                            3*self.sigma_g + self.dz/10, self.dz)
+        self.gaus2 = np.exp(-0.5*(self.x/self.sigma_g)**2)
+        self.bigpdf = np.zeros(len(self.zbins))
+        self.bigpdf2 = np.zeros(len(self.zfine2[self.wzin]))
 
     def get_hist(self, vals):
-        self.bigpdf = zeros(len(self.zbins))
-        out = array(vals)
+        self.bigpdf = np.zeros(len(self.zbins))
+        out = np.array(vals)
         if self.Pars.predictionclass == 'Reg':
-            for zpi in xrange(len(out)):
-                mybin = int(floor(out[zpi] / self.resz))
+            for zpi in range(len(out)):
+                mybin = int(np.floor(out[zpi] / self.resz))
                 if mybin > self.Nbins - 1: continue
                 self.bigpdf[mybin] += 1
         return self.bigpdf
@@ -151,12 +160,12 @@ class GetPz_short():
         pdf = rawpdf
         self.zs = zs
         if zbins != '': self.zbins = zbins
-        pdf2 = interp(self.zfine2, self.zbins, pdf)
-        pdf2 = where(greater(pdf2, max(pdf2) * 0.20), pdf2, 0.)
-        pdf2 = convolve(pdf2, self.gaus2, 1)
-        pdf2 = where(greater(pdf2, max(pdf2) * 0.005), pdf2, 0.)
-        if sum(pdf2) > 0.: pdf2 /= sum(pdf2)
-        self.zs0 = self.zfine2[argmax(pdf2)]
+        pdf2 = np.interp(self.zfine2, self.zbins, pdf)
+        pdf2 = np.where(np.greater(pdf2, np.max(pdf2) * 0.20), pdf2, 0.)
+        pdf2 = np.convolve(pdf2, self.gaus2, 1)
+        pdf2 = np.where(np.greater(pdf2, np.max(pdf2) * 0.005), pdf2, 0.)
+        if np.sum(pdf2) > 0.: pdf2 /= np.sum(pdf2)
+        self.zs0 = self.zfine2[np.argmax(pdf2)]
         self.zs0 = min(self.zs0, self.Pars.maxz)
         self.zs0 = max(self.zs0, self.Pars.minz)
         self.zs1 = sum(self.zfine2 * pdf2)
@@ -169,7 +178,7 @@ class GetPz_short():
         pdf2 = pdf2[self.wzin]
         if sum(pdf2) > 0.: pdf2 /= sum(pdf2)
         self.bigpdf2 = pdf2
-        bigZ = zeros(7)
+        bigZ = np.zeros(7)
         bigZ[0] = self.zs
         bigZ[1] = self.zs0
         bigZ[2] = self.zs1
@@ -181,10 +190,10 @@ class GetPz_short():
 
 
 def class_stat(s1, s2, nv, Pars):
-    z1 = s1 / nv
+    z1 = s1 // nv
     midp = 0.5 * (Pars.minz + Pars.maxz)
-    z0 = where(z1 >= midp, Pars.maxz, Pars.minz)
-    s0 = sqrt((s2 - nv * z1 * z1) / nv)
+    z0 = np.where(z1 >= midp, Pars.maxz, Pars.minz)
+    s0 = np.sqrt((s2 - nv*z1*z1)/nv)
     return z0, z1, s0
 
 
@@ -203,7 +212,7 @@ def save_single(Zall, Pars, path='', fileout='', oob='no', var=''):
     if not os.path.exists(path): os.system('mkdir -p ' + path)
     if fileout == '':
         filebase = Pars.finalfilename
-        for j in xrange(100):
+        for j in range(100):
             if os.path.exists(path + filebase + '.' + str(j) + '.mlz'):
                 continue
             else:
@@ -221,9 +230,9 @@ def save_single(Zall, Pars, path='', fileout='', oob='no', var=''):
     fout = open(fileout, 'w')
     header = '# ztrue     zmode0    zmean1     zConf0    zConf1    err0    err1\n'
     fout.write(header)
-    for i in xrange(len(zs0)):
-        Line = '{0:.4f} {1:.4f} {2:.4f} {3:.4f} {4:.4f} {5:.4f} {6:.4f}'.format(ztrue[i], zs0[i], zs1[i], zC0[i],
-                                                                                zC1[i], e0[i], e1[i])
+    for i in range(len(zs0)):
+        Line = '{:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}'
+        Line = Line.format(ztrue[i], zs0[i], zs1[i], zC0[i], zC1[i], e0[i], e1[i])
         fout.write(Line + '\n')
     fout.close()
 
@@ -232,7 +241,7 @@ def get_path_new(Pars):
     path = Pars.path_results
     if not os.path.exists(path): os.system('mkdir -p ' + path)
     filebase = Pars.finalfilename
-    for j in xrange(100):
+    for j in range(100):
         if os.path.exists(path + filebase + '.' + str(j) + '.mlz'):
             continue
         else:
@@ -240,7 +249,8 @@ def get_path_new(Pars):
     return path, filebase, j
 
 
-def save_PDF(zfine, pdfs, Pars, path='', filebase='', num=-1, oob='no', var='', multiple='no', rank=0):
+def save_PDF(zfine, pdfs, Pars, path='', filebase='', num=-1, oob='no', 
+             var='', multiple='no', rank=0):
     """
     Saves photo-z PDFs
     """
@@ -251,9 +261,9 @@ def save_PDF(zfine, pdfs, Pars, path='', filebase='', num=-1, oob='no', var='', 
     if filebase == '':
         filebase = Pars.finalfilename
     if num == -1:
-        for j in xrange(100):
-            if os.path.exists(path + filebase + '.' + str(j) + '.mlz') and os.path.exists(
-                                                    path + filebase + '.' + str(j) + '.P.npy'):
+        for j in range(100):
+            if (os.path.exists(path + filebase + '.' + str(j) + '.mlz') and 
+                os.path.exists(path + filebase + '.' + str(j) + '.P.npy')):
                 continue
             else:
                 fileoutPDF = path + filebase + '.' + str(j) + '.P'
@@ -264,9 +274,9 @@ def save_PDF(zfine, pdfs, Pars, path='', filebase='', num=-1, oob='no', var='', 
         if oob == 'yes': fileoutPDF = path + filebase + '_oob' + var + '.' + str(num) + '.P'
 
     if multiple == 'yes': fileoutPDF = fileoutPDF + '_' + str(rank)
-    pdfs = concatenate((pdfs, [zfine]))
+    pdfs = np.concatenate((pdfs, [zfine]))
     if Pars.writefits == 'no':
-        save(fileoutPDF, pdfs)
+        np.save(fileoutPDF, pdfs)
     else:
         head = pf.Header()
         head['N_TOT'] = len(pdfs) - 1
@@ -281,7 +291,7 @@ def save_PDF(zfine, pdfs, Pars, path='', filebase='', num=-1, oob='no', var='', 
         table0 = pf.BinTableHDU.from_columns(pf.ColDefs([col0]))
         prihdu = pf.PrimaryHDU(header=head)
         hdulist = pf.HDUList([prihdu, table0])
-        hdulist.writeto(fileoutPDF + '.fits', clobber=True)
+        hdulist.writeto(fileoutPDF + '.fits', overwrite=True)
 
 
 def save_PDF_sparse(zfine, pdfs, head, Pars, path='', filebase='', num=-1, oob='no', var='', multiple='no', rank=0):
@@ -295,10 +305,11 @@ def save_PDF_sparse(zfine, pdfs, head, Pars, path='', filebase='', num=-1, oob='
     if filebase == '':
         filebase = Pars.finalfilename
     if num == -1:
-        for j in xrange(100):
-            if os.path.exists(path + filebase + '.' + str(j) + '.mlz') and os.path.exists(
-                                                    path + filebase + '.' + str(j) + '.P.npy'):
+        for j in range(100):
+            if (os.path.exists(path + filebase + '.' + str(j) + '.mlz') and 
+                os.path.exists(path + filebase + '.' + str(j) + '.P.npy')):
                 continue
+
             else:
                 fileoutPDF = path + filebase + '.' + str(j) + '.Psparse'
                 if oob == 'yes': fileoutPDF = path + filebase + '_oob' + var + '.' + str(j) + '.P'
@@ -316,7 +327,7 @@ def save_PDF_sparse(zfine, pdfs, head, Pars, path='', filebase='', num=-1, oob='
     table2 = pf.BinTableHDU.from_columns(pf.ColDefs([col2]))
     prihdu = pf.PrimaryHDU(header=head)
     hdulist = pf.HDUList([prihdu, table1, table2])
-    hdulist.writeto(fileoutPDF + '.fits', clobber=True)
+    hdulist.writeto(fileoutPDF + '.fits', overwrite=True)
 
 
 def save_single_t(Zall, Pars, path='', fileout='', oob='no', var=''):
@@ -328,7 +339,7 @@ def save_single_t(Zall, Pars, path='', fileout='', oob='no', var=''):
     if path == '': path = Pars.path_results
     if not os.path.exists(path): os.system('mkdir -p ' + path)
     if fileout == '': filebase = Pars.finalfilename
-    for j in xrange(100):
+    for j in range(100):
         if os.path.exists(path + filebase + '.' + str(j) + '.mlz'):
             continue
         else:
@@ -337,7 +348,7 @@ def save_single_t(Zall, Pars, path='', fileout='', oob='no', var=''):
     fout = open(fileout, 'w')
     header = '# type_phot    type_ml\n'
     fout.write(header)
-    for i in xrange(len(type_phot)):
-        Line = '{0:.4f} {1:.4f}'.format(type_phot[i], type_ml[i])
+    for i in range(len(type_phot)):
+        Line = '{:.4f} {:.4f}'.format(type_phot[i], type_ml[i])
         fout.write(Line + '\n')
     fout.close()

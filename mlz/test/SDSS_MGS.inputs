@@ -27,7 +27,7 @@ KeyAtt           : zs                           #name of  the column to be predi
 #     CODE STEPS
 #------------------------------------------------------
 CheckOnly        : no                # Check everything with small samples to test the codes
-PredictionMode   : TPZ               # TPZ/SOM/TPZ_C
+PredictionMode   : TPZ_C             # TPZ/SOM/TPZ_C
 PredictionClass  : Reg               # Reg/Class
 #------------------------------------------------------
 #   REDSHIFT RELATED (OR FOR CLASSIFICATION)
@@ -39,7 +39,7 @@ NzBins           : 80                # Number of bins in z range (2 for Classifi
 #   COMMON FOR TPZ/SOM
 #------------------------------------------------------
 NRandom          : 2                 # Number of random realizations (1 original data)
-NTrees           : 4                 # Number of trees or maps!  (total number is NRandom x NTrees)
+NTrees           : 2                 # Number of trees or maps!  (total number is NRandom x NTrees)
 Natt             : 3                 # Number of attributes m* for TPZ or subsample for SOM
 OobError         : no                # Out-of-bag error?
 VarImportance    : no                # Perform variable importance ranking?
