@@ -458,7 +458,7 @@ if Pars_in.dotest == 'yes':
     for k in range(ntot):
         ff = '_{:04d}'.format(k)
         filec = path1 + fileb + ff + '.npy'
-        S = np.load(filec)
+        S = np.load(filec, allow_pickle=True)
         S = S.item()
         DD = S.dict_dim
         if Pmode == 'SOM': 
