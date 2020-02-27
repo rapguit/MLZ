@@ -272,7 +272,7 @@ class catalog():
         """
         Loads the random catalog with the realizations
         """
-        Junk = np.load(self.Pars.path_train + self.Pars.randomcatname + '.npy')
+        Junk = np.load(self.Pars.path_train + self.Pars.randomcatname + '.npy', allow_pickle=True)
         self.BigRan = Junk.item()
         del Junk
 
