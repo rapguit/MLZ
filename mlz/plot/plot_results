@@ -733,11 +733,11 @@ s6M.set_xlabel(r'$z_{spec}$', fontsize=18)
 s6M.set_ylabel(r'$\sigma_{68}$', fontsize=18)
 s6M.set_xlim(DTpars.minz, DTpars.maxz)
 
-s4M.hist(zx1, bins=50, range=(DTpars.minz, DTpars.maxz), normed=True, color='red', histtype='step', label=r'$z_{spec}$',
+s4M.hist(zx1, bins=50, range=(DTpars.minz, DTpars.maxz), density=True, color='red', histtype='step', label=r'$z_{spec}$',
          lw=2)
-s4M.hist(zy1[w1], bins=50, range=(DTpars.minz, DTpars.maxz), normed=True, color='blue', histtype='step', label=name1,
+s4M.hist(zy1[w1], bins=50, range=(DTpars.minz, DTpars.maxz), density=True, color='blue', histtype='step', label=name1,
          lw=2)
-s4M.hist(zy2[w2], bins=50, range=(DTpars.minz, DTpars.maxz), normed=True, color='green', histtype='step', label=name2,
+s4M.hist(zy2[w2], bins=50, range=(DTpars.minz, DTpars.maxz), density=True, color='green', histtype='step', label=name2,
          lw=2)
 s4M.set_xlabel('Redshift')
 s4M.set_ylabel('N(z)')
